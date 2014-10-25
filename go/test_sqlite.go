@@ -22,7 +22,7 @@ func main() {
 
     var tags []freefare.Tag
     for {
-        tags, err := freefare.GetTags(d);
+        tags, err = freefare.GetTags(d);
         if err != nil {
             panic(err);
         }
