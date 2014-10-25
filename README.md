@@ -16,6 +16,8 @@ Install dependencies
 
     go get github.com/fuzxxl/nfc/2.0/nfc
     go get github.com/fuzxxl/freefare/0.3/freefare
+    go get gopkg.in/yaml.v2
+    go get github.com/jacobsa/crypto/cmac
 
 ### RasPi
 

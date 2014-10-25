@@ -18,10 +18,10 @@ func main() {
     err = yaml.Unmarshal([]byte(dat), &m);
     fmt.Println(m);
     
-    foo := m["aclapp"]
-    fmt.Println(foo);
+//    foo := m["aclapp"]
+//    fmt.Println(foo);
     // ugh....
-    key := foo.(map[interface{}]interface{})["read"].(string)
+    key := m["aclapp"].(map[interface{}]interface{})["read"].(string)
     fmt.Println(key);
 
     keybytes, err := hex.DecodeString(key);
