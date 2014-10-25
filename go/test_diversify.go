@@ -6,7 +6,8 @@ import (
     "fmt"
     "encoding/hex"
     "github.com/fuzxxl/nfc/2.0/nfc"    
-    "github.com/fuzxxl/freefare/0.3/freefare"    
+    "github.com/fuzxxl/freefare/0.3/freefare"
+    "github.com/jacobsa/crypto/cmac"
 )
 
 func padUID(block []byte) ([]byte, bool) {
@@ -89,10 +90,16 @@ func main() {
     	copy(uidaid[1:], uidbytes)
     	copy(uidaid[len(uidbytes)+1:], aid)
 
-        fmt.Println("Found tag", uidstr)
+        fmt.Printf("Found tag %s\n", uidstr)
 
         D, padded := padUID(uidaid)
-        fmt.Println("D=", D, " padded=", padded)
+        fmt.Println("D=", D, "padded=", padded)
+        
+        foo, err := cmac.New(D)
+        fmt.Println(foo)
+// dafuq, how are we supposed to access those subkeys
+//        fmt.Println(foo.k1)
+//        fmt.Println(foo.k2)
     }
 
 }    
