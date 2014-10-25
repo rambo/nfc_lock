@@ -84,9 +84,10 @@ func main() {
         fmt.Println(uidstr)
         fmt.Println(uidbytes)
 
-    	uidaid := make([]byte, len(uidbytes)+len(aid))
-    	copy(uidaid, uidbytes)
-    	copy(uidaid[len(uidbytes):], aid)
+    	uidaid := make([]byte, len(uidbytes)+len(aid)+1)
+    	uidaid[0] =0x01
+    	copy(uidaid[1:], uidbytes)
+    	copy(uidaid[len(uidbytes)+1:], aid)
 
         fmt.Println("Found tag", uidstr)
 
