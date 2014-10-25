@@ -42,6 +42,7 @@ func main() {
             uidstr := tag.UID()
             fmt.Println("Found tag", uidstr);
             // TODO: Check tag
+            // TODO: do not rediscover same tag at every iteration (ie track state somehow)
         }
     }
 }
