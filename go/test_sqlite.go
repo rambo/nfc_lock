@@ -5,6 +5,7 @@ import (
     "github.com/fuzxxl/nfc/2.0/nfc"    
     "github.com/fuzxxl/freefare/0.3/freefare"    
     "code.google.com/p/go-sqlite/go1/sqlite3"
+    "time"
 )
 
 func main() {
@@ -19,11 +20,20 @@ func main() {
         panic(err);
     }
 
-    tags, err := freefare.GetTags(d);
-    if err != nil {
-        panic(err);
+    var tags []freefare.Tag
+    for {
+        tags, err := freefare.GetTags(d);
+        if err != nil {
+            panic(err);
+        }
+        if len(tags) > 0 {
+            break;
+        }
+        time.Sleep(100 * time.Millisecond)
+        //fmt.Println("...polling")
     }
     fmt.Println(tags);
+    valid_found := false
     for i := 0; i < len(tags); i++ {
         tag := tags[i]
         uidstr := tag.UID()
@@ -32,7 +42,10 @@ func main() {
             var rowid int64
             s.Scan(&rowid, row)     // Assigns 1st column to rowid, the rest to row
             fmt.Println(rowid, row)
+            valid_found = true
         }
-        
+    }
+    if !valid_found {
+        fmt.Println("NO ACCESS")
     }
 }
