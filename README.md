@@ -14,5 +14,5 @@ Make sure your GOPATH is set
 
 Install dependencies
 
-    go get github.com/fuzxxl/nfc/1.0/nfc
+    go get github.com/fuzxxl/nfc/2.0/nfc
     go get github.com/fuzxxl/freefare/0.3/freefare
