@@ -10,23 +10,6 @@ import (
     "github.com/jacobsa/crypto/cmac"
 )
 
-func padUID(block []byte) ([]byte, bool) {
-	blockLen := len(block)
-	if blockLen >= 32 {
-		panic("PadBlock input must be less than 32 bytes.")
-	}
-
-	result := make([]byte, 32)
-	copy(result, block)
-	result[blockLen] = 0x80
-
-	if blockLen == 31 {
-	   return result, false
-	}
-
-	return result, true
-}
-
 func main() {
     dat, err := ioutil.ReadFile("keys.yaml")
     if err != nil {
@@ -92,15 +75,16 @@ func main() {
 
         fmt.Printf("Found tag %s\n", uidstr)
 
-        D, padded := padUID(uidaid)
-        fmt.Println("D=", D, "padded=", padded)
+        CMAC, err := cmac.New(appkey)
+        if err != nil {
+            panic(err)
+        }
+
+        // This never returns error
+        CMAC.Write(uidaid)
+        dkey := CMAC.Sum(uidaid)[len(uidaid):]
         
-        foo, err := cmac.New(D)
-        bar := foo.Sum(appkey)
-        fmt.Println(bar)
-// dafuq, how are we supposed to access those subkeys
-//        fmt.Println(foo.k1)
-//        fmt.Println(foo.k2)
+        fmt.Println(hex.EncodeToString(dkey))
     }
 
 }    

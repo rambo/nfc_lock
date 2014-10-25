@@ -68,8 +68,8 @@ func main() {
         panic(err)
     }
 //    fmt.Println(foo, err)
-    n, err := foo.Write(uidaid)
-    fmt.Println(n)
+    foo.Write(uidaid)
+
     bar := foo.Sum(uidaid)
     
 //    fmt.Println(hex.EncodeToString(bar))
