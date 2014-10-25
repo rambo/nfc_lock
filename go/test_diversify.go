@@ -32,18 +32,37 @@ func main() {
         panic(err)
     }
 
-    m := make(map[interface{}]interface{});
-    err = yaml.Unmarshal([]byte(dat), &m);
+    keymap := make(map[interface{}]interface{});
+    err = yaml.Unmarshal([]byte(dat), &keymap);
     if err != nil {
         panic(err)
     }
 
-    appkey_str := m["aclapp"].(map[interface{}]interface{})["read"].(string)
+    dat2, err := ioutil.ReadFile("apps.yaml")
+    if err != nil {
+        panic(err)
+    }
+
+    appmap := make(map[interface{}]interface{});
+    err = yaml.Unmarshal([]byte(dat2), &appmap);
+    if err != nil {
+        panic(err)
+    }
+
+    appkey_str := keymap["aclapp"].(map[interface{}]interface{})["read"].(string)
     appkey, err := hex.DecodeString(appkey_str)
     if err != nil {
         panic(err)
     }
     fmt.Println(appkey)
+
+    aid_str := appmap["aclapp"].(map[interface{}]interface{})["aid"].(string)
+    aid, err := hex.DecodeString(aid_str)
+    if err != nil {
+        panic(err)
+    }
+    fmt.Println(aid)
+
 
     d, err := nfc.Open("");
     if err != nil {
@@ -64,11 +83,14 @@ func main() {
         }
         fmt.Println(uidstr)
         fmt.Println(uidbytes)
-        
-        
+
+    	uidaid := make([]byte, len(uidbytes)+len(aid))
+    	copy(uidaid, uidbytes)
+    	copy(uidaid[len(uidbytes):], aid)
+
         fmt.Println("Found tag", uidstr)
 
-        D, padded := padUID(uidbytes)
+        D, padded := padUID(uidaid)
         fmt.Println("D=", D, " padded=", padded)
     }
 

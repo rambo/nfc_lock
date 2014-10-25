@@ -1,0 +1,8 @@
+uidapp:
+    aid: "031337"
+    readkeyid:  C
+    writekeyid: D
+aclapp:
+    aid: "041337"
+    readkeyid:  E
+    writekeyid: F
