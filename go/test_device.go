@@ -4,6 +4,7 @@ import (
     "github.com/fuzxxl/nfc/2.0/nfc"    
     "github.com/fuzxxl/freefare/0.3/freefare"    
     "fmt"
+    "encoding/hex"
 )
 
 func main() {
@@ -11,10 +12,18 @@ func main() {
     fmt.Println(err);
     fmt.Println(d.Information());
     tags, err := freefare.GetTags(d);
-    fmt.Println(err);
+    if err != nil {
+        panic(err);
+    }
     fmt.Println(tags);
     for i := 0; i < len(tags); i++ {
         tag := tags[i]
-        fmt.Println(tag.UID())
+        uidstr := tag.UID()
+        uidbytes, err := hex.DecodeString(uidstr);
+        if err != nil {
+            panic(err);
+        }
+        fmt.Println(uidstr)
+        fmt.Println(uidbytes)
     }
 }
