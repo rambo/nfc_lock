@@ -7,7 +7,6 @@ import (
 )
 
 func main() {
-    fmt.Println("Hello, 世界");
     d, err := nfc.Open("");
     fmt.Println(err);
     fmt.Println(d.Information());
