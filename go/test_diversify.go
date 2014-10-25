@@ -14,13 +14,14 @@ func padUID(block []byte) ([]byte, bool) {
 	if blockLen >= 32 {
 		panic("PadBlock input must be less than 32 bytes.")
 	}
-	if blockLen == 32 {
-	   return block, false
-	}
 
 	result := make([]byte, 32)
 	copy(result, block)
 	result[blockLen] = 0x80
+
+	if blockLen == 31 {
+	   return result, false
+	}
 
 	return result, true
 }
