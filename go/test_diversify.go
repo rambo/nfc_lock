@@ -1,12 +1,8 @@
 package main
 
 import (
-    "gopkg.in/yaml.v2"
-    "io/ioutil"
     "fmt"
     "encoding/hex"
-    "github.com/fuzxxl/nfc/2.0/nfc"    
-    "github.com/fuzxxl/freefare/0.3/freefare"
     "github.com/jacobsa/crypto/cmac"
 )
 
@@ -28,79 +24,60 @@ func padUID(block []byte) ([]byte, bool) {
 }
 
 func main() {
-    dat, err := ioutil.ReadFile("keys.yaml")
-    if err != nil {
-        panic(err)
-    }
-
-    keymap := make(map[interface{}]interface{});
-    err = yaml.Unmarshal([]byte(dat), &keymap);
-    if err != nil {
-        panic(err)
-    }
-
-    dat2, err := ioutil.ReadFile("apps.yaml")
-    if err != nil {
-        panic(err)
-    }
-
-    appmap := make(map[interface{}]interface{});
-    err = yaml.Unmarshal([]byte(dat2), &appmap);
-    if err != nil {
-        panic(err)
-    }
-
-    appkey_str := keymap["aclapp"].(map[interface{}]interface{})["read"].(string)
+    appkey_str := "00112233445566778899AABBCCDDEEFF"
     appkey, err := hex.DecodeString(appkey_str)
     if err != nil {
         panic(err)
     }
     fmt.Println(appkey)
 
-    aid_str := appmap["aclapp"].(map[interface{}]interface{})["aid"].(string)
+    aid_str := "3042F5"
     aid, err := hex.DecodeString(aid_str)
     if err != nil {
         panic(err)
     }
     fmt.Println(aid)
 
-
-    d, err := nfc.Open("");
+    sysid_str := "4E585020416275"
+    sysid, err := hex.DecodeString(sysid_str)
     if err != nil {
         panic(err)
     }
+    fmt.Println(sysid)
 
-    tags, err := freefare.GetTags(d);
+
+    uidstr := "04782E21801D80"
+    uidbytes, err := hex.DecodeString(uidstr);
+    if err != nil {
+        panic(err);
+    }
+    fmt.Println(uidstr)
+    fmt.Println(uidbytes)
+
+    uidaid := make([]byte, len(uidbytes)+len(aid)+len(sysid)+1)
+    uidaid[0] =0x01
+    copy(uidaid[1:], uidbytes)
+    copy(uidaid[len(uidbytes)+1:], aid)
+    copy(uidaid[len(uidbytes)+len(aid)+1:], sysid)
+
+//    D, padded := padUID(uidaid)
+//    fmt.Println("D=", hex.EncodeToString(D), "padded=", padded)
+    
+    foo, err := cmac.New(appkey)
     if err != nil {
         panic(err)
     }
+//    fmt.Println(foo, err)
+    n, err := foo.Write(uidaid)
+    fmt.Println(n)
+    bar := foo.Sum(uidaid)
+    
+//    fmt.Println(hex.EncodeToString(bar))
+    
+    dkey := bar[len(uidaid):]
 
-    for i := 0; i < len(tags); i++ {
-        tag := tags[i]
-        uidstr := tag.UID()
-        uidbytes, err := hex.DecodeString(uidstr);
-        if err != nil {
-            panic(err);
-        }
-        fmt.Println(uidstr)
-        fmt.Println(uidbytes)
-
-    	uidaid := make([]byte, len(uidbytes)+len(aid)+1)
-    	uidaid[0] =0x01
-    	copy(uidaid[1:], uidbytes)
-    	copy(uidaid[len(uidbytes)+1:], aid)
-
-        fmt.Printf("Found tag %s\n", uidstr)
-
-        D, padded := padUID(uidaid)
-        fmt.Println("D=", D, "padded=", padded)
-        
-        foo, err := cmac.New(D)
-        fmt.Println(foo)
-// dafuq, how are we supposed to access those subkeys
-//        fmt.Println(foo.k1)
-//        fmt.Println(foo.k2)
-    }
+    fmt.Println(hex.EncodeToString(dkey))
+    
 
 }    
 
