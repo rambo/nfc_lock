@@ -1,8 +1,10 @@
 package main
 
-import "fmt"
-import "github.com/fuzxxl/nfc/2.0/nfc"
-import "github.com/fuzxxl/freefare/0.3/freefare"
+import (
+    "fmt"
+    "github.com/fuzxxl/nfc/2.0/nfc"    
+    "github.com/fuzxxl/freefare/0.3/freefare"
+)
 
 func main() {
 
@@ -19,7 +21,7 @@ func main() {
 		if (tag.Type() != freefare.DESFire) {
 			continue
 		}
-		fmt.Println(tag.String())
+		fmt.Println(tag.String(), tag.UID())
 		desfiretag := tag.(freefare.DESFireTag)
 		error := desfiretag.Connect()
 		if error != nil {
@@ -38,7 +40,7 @@ func main() {
 		}
 		for i := 0; i < len(apps); i++ {
 			app := apps[i]
-			fmt.Println(app)
+			fmt.Printf("App 0x%x (%d)\n", app.Aid(), app.Aid())
 		}
 	}
 }
