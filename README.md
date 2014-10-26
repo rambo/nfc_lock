@@ -3,17 +3,30 @@ nfc_lock
 
 (more) secure electric lock with DESFire EV1 NFC tags
 
+## libnfc and libfreefare
+
+Ubuntu 14.04 has libnfc but no libfreefare, use [this PPA](https://launchpad.net/~christopher-hoskin/+archive/ubuntu/ppa)
+
+    sudo apt-add-repository ppa:christopher-hoskin/ppa
+    sudo apt-get update
+    sudo apt-get install libnfc5 libnfc-bin libnfc-pn53x-examples libnfc-examples
+    sudo apt-get install libfreefare0 libfreefare-bin 
+    sudo apt-get install golang mercurial git-core
+
+### RasPi
+
+Install the debs from [./raspi/debs/](./raspi/debs/) (or compile them using source debs from Jessie)
 
 ## Go
 
 Install Go and some deps you are going to need when fetching Go libraries
 
-    apt-get install golang mercurial git-core
+    sudo apt-get install golang mercurial git-core
 
 Make sure your GOPATH is set
 
-    mkdir $HOME/go
-    export GOPATH=$HOME/go
+    mkdir $HOME/.go
+    export GOPATH=$HOME/.go
     export PATH=$PATH:$GOPATH/bin
 
 Install library dependencies

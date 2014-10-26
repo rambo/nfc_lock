@@ -6,3 +6,4 @@ aclapp:
     aid: "041337"
     readkeyid:  E
     writekeyid: F
+    require_acl: 1
