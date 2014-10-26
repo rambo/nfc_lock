@@ -9,7 +9,8 @@ import (
     "code.google.com/p/go-sqlite/go1/sqlite3"
     "time"
     "github.com/davecheney/gpio"
-    "github.com/davecheney/gpio/rpi"
+    "gopkg.in/yaml.v2"
+    "io/ioutil"
 )
 
 func heartbeat() {
@@ -19,9 +20,24 @@ func heartbeat() {
     }
 }
 
+func pulse_gpio(pin gpio.Pin, ms time.Duration) {
+    pin.Set()
+    time.Sleep(ms * time.Millisecond)
+    pin.Clear()
+}
 
 func main() {
     d, err := nfc.Open("");
+    if err != nil {
+        panic(err);
+    }
+
+    gpiodata, err := ioutil.ReadFile("gpio.yaml");
+    if err != nil {
+        panic(err);
+    }
+    gpiomap := make(map[interface{}]interface{});
+    err = yaml.Unmarshal([]byte(gpiodata), &gpiomap);
     if err != nil {
         panic(err);
     }
@@ -34,26 +50,29 @@ func main() {
 
     go heartbeat()
 
-	// set GPIO21 ie the last pin on b+ to output mode
-	green_pin, err := gpio.OpenPin(21, gpio.ModeOutput)
+	green_led, err := gpio.OpenPin(gpiomap["green_led"].(map[interface{}]interface{})["pin"].(int), gpio.ModeOutput)
 	if err != nil {
-		fmt.Printf("Error opening pin! %s\n", err)
+		fmt.Printf("Error opening green_led! %s\n", err)
 		return
 	}
-
-	// turn the led off on exit
+	red_led, err := gpio.OpenPin(gpiomap["red_led"].(map[interface{}]interface{})["pin"].(int), gpio.ModeOutput)
+	if err != nil {
+		fmt.Printf("Error opening green_led! %s\n", err)
+		return
+	}
+	// turn the leds off on exit
 	ch := make(chan os.Signal, 1)
 	signal.Notify(ch, os.Interrupt)
 	go func() {
 		for _ = range ch {
 			fmt.Printf("\nClearing and unexporting the pin.\n")
-			green_pin.Clear()
-			green_pin.Close()
+			green_led.Clear()
+			green_led.Close()
 			os.Exit(0)
 		}
 	}()
 
-    // mainlopp
+    // mainloop
     for {
         // Poll for tags
         var tags []freefare.Tag
@@ -79,20 +98,14 @@ func main() {
                 s.Scan(&rowid, row)     // Assigns 1st column to rowid, the rest to row
                 fmt.Println(rowid, row)
                 valid_found = true
+                fmt.Println("Access GRANTED to ", uidstr)
+                go pulse_gpio(green_led, gpiomap["green_led"].(map[interface{}]interface{})["time"].(time.Duration))
+                // TODO: run the relay too
             }
         }
-        if valid_found {
-            // TODO: run relay in subroutine
-            fmt.Println("Access GRANTED")
-            go func() {
-                green_pin.Set()
-                fmt.Println("green ON")
-                time.Sleep(2000 * time.Millisecond)
-                green_pin.Clear()
-                fmt.Println("green OFF")
-            }()
-        } else {
+        if !valid_found {
             fmt.Println("Access DENIED")
+            go pulse_gpio(red_led, gpiomap["red_led"].(map[interface{}]interface{})["time"].(time.Duration))
         }
         // Wait a moment before continuing with fast polling
         time.Sleep(500 * time.Millisecond)
