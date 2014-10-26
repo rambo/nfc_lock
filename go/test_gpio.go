@@ -26,6 +26,11 @@ func pulse_gpio(pin gpio.Pin, ms int) {
     pin.Clear()
 }
 
+func clear_and_close(pin gpio.Pin) {
+    pin.Clear()
+    pin.Close()
+}
+
 func main() {
     d, err := nfc.Open("");
     if err != nil {
@@ -60,14 +65,20 @@ func main() {
 		fmt.Printf("Error opening green_led! %s\n", err)
 		return
 	}
+	relay, err := gpio.OpenPin(gpiomap["relay"].(map[interface{}]interface{})["pin"].(int), gpio.ModeOutput)
+	if err != nil {
+		fmt.Printf("Error opening relay! %s\n", err)
+		return
+	}
 	// turn the leds off on exit
 	ch := make(chan os.Signal, 1)
 	signal.Notify(ch, os.Interrupt)
 	go func() {
 		for _ = range ch {
 			fmt.Printf("\nClearing and unexporting the pins.\n")
-			green_led.Clear()
-			green_led.Close()
+			go clear_and_close(green_led)
+			go clear_and_close(red_led)
+			go clear_and_close(relay)
 			os.Exit(0)
 		}
 	}()
@@ -97,11 +108,10 @@ func main() {
                 var rowid int64
                 s.Scan(&rowid, row)     // Assigns 1st column to rowid, the rest to row
                 fmt.Println(rowid, row)
-                // TODO: Check the ACL bits
                 valid_found = true
-                fmt.Println("Access GRANTED to", uidstr)
+                fmt.Println("Access GRANTED to ", uidstr)
                 go pulse_gpio(green_led, gpiomap["green_led"].(map[interface{}]interface{})["time"].(int))
-                // TODO: run the relay too
+                go pulse_gpio(relay, gpiomap["relay"].(map[interface{}]interface{})["time"].(int))
             }
         }
         if !valid_found {
