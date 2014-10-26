@@ -37,6 +37,17 @@ func main() {
         panic(err);
     }
 
+    appdata, err := ioutil.ReadFile("apps.yaml");
+    if err != nil {
+        panic(err);
+    }
+    appmap := make(map[interface{}]interface{});
+    err = yaml.Unmarshal([]byte(appdata), &appmap);
+    if err != nil {
+        panic(err);
+    }
+    required_acl := int64(appmap["aclapp"].(map[interface{}]interface{})["require_acl"].(int))
+
     gpiodata, err := ioutil.ReadFile("gpio.yaml");
     if err != nil {
         panic(err);
@@ -108,7 +119,11 @@ func main() {
             for s, err := c.Query(sql, uidstr); err == nil; err = s.Next() {
                 var rowid int64
                 s.Scan(&rowid, row)     // Assigns 1st column to rowid, the rest to row
-                fmt.Println(rowid, row)
+                db_acl := row["acl"].(int64)
+                if (db_acl & required_acl) == 0 {
+                    fmt.Println("Found card ", uidstr , " but ACL not granted")
+                    continue
+                }
                 valid_found = true
                 fmt.Println("Access GRANTED to ", uidstr)
                 go pulse_gpio(green_led, gpiomap["green_led"].(map[interface{}]interface{})["time"].(int))
