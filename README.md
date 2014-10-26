@@ -8,12 +8,12 @@ nfc_lock
 
 Install Go and some deps you are going to need when fetching Go libraries
 
-    apt-get install golang mercurial git-core
+    sudo apt-get install golang mercurial git-core
 
 Make sure your GOPATH is set
 
-    mkdir $HOME/go
-    export GOPATH=$HOME/go
+    mkdir $HOME/.go
+    export GOPATH=$HOME/.go
     export PATH=$PATH:$GOPATH/bin
 
 Install library dependencies
