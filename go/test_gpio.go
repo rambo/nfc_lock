@@ -20,9 +20,9 @@ func heartbeat() {
     }
 }
 
-func pulse_gpio(pin gpio.Pin, ms time.Duration) {
+func pulse_gpio(pin gpio.Pin, ms int) {
     pin.Set()
-    time.Sleep(ms * time.Millisecond)
+    time.Sleep(time.Duration(ms) * time.Millisecond)
     pin.Clear()
 }
 
@@ -99,13 +99,13 @@ func main() {
                 fmt.Println(rowid, row)
                 valid_found = true
                 fmt.Println("Access GRANTED to ", uidstr)
-                go pulse_gpio(green_led, gpiomap["green_led"].(map[interface{}]interface{})["time"].(time.Duration))
+                go pulse_gpio(green_led, gpiomap["green_led"].(map[interface{}]interface{})["time"].(int))
                 // TODO: run the relay too
             }
         }
         if !valid_found {
             fmt.Println("Access DENIED")
-            go pulse_gpio(red_led, gpiomap["red_led"].(map[interface{}]interface{})["time"].(time.Duration))
+            go pulse_gpio(red_led, gpiomap["red_led"].(map[interface{}]interface{})["time"].(int))
         }
         // Wait a moment before continuing with fast polling
         time.Sleep(500 * time.Millisecond)
