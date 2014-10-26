@@ -6,7 +6,7 @@ import "github.com/fuzxxl/freefare/0.3/freefare"
 
 func main() {
 
-	device, error := nfc.Open("pn532_uart:/dev/ttyUSB0:115200")
+	device, error := nfc.Open("")
 	if error != nil {
 		panic(error)
 	}
