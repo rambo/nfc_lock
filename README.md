@@ -6,18 +6,25 @@ nfc_lock
 
 ## Go
 
+Install Go and some deps you are going to need when fetching Go libraries
+
+    apt-get install golang mercurial git-core
+
 Make sure your GOPATH is set
 
     mkdir $HOME/go
     export GOPATH=$HOME/go
     export PATH=$PATH:$GOPATH/bin
 
-Install dependencies
+Install library dependencies
 
     go get github.com/fuzxxl/nfc/2.0/nfc
     go get github.com/fuzxxl/freefare/0.3/freefare
     go get gopkg.in/yaml.v2
     go get github.com/jacobsa/crypto/cmac
+    go get code.google.com/p/go-sqlite/go1/sqlite3
+    go get github.com/davecheney/gpio
+    go get github.com/davecheney/gpio/rpi
 
 ### RasPi
 
