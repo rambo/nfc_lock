@@ -73,6 +73,7 @@ func main() {
 	// turn the leds off on exit
 	exit_ch := make(chan os.Signal, 1)
 	signal.Notify(exit_ch, os.Interrupt)
+	signal.Notify(exit_ch, os.Kill)
 	go func() {
 		for _ = range exit_ch {
 			fmt.Printf("\nClearing and unexporting the pins.\n")
