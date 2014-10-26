@@ -65,7 +65,7 @@ func main() {
 	signal.Notify(ch, os.Interrupt)
 	go func() {
 		for _ = range ch {
-			fmt.Printf("\nClearing and unexporting the pin.\n")
+			fmt.Printf("\nClearing and unexporting the pins.\n")
 			green_led.Clear()
 			green_led.Close()
 			os.Exit(0)
@@ -97,8 +97,9 @@ func main() {
                 var rowid int64
                 s.Scan(&rowid, row)     // Assigns 1st column to rowid, the rest to row
                 fmt.Println(rowid, row)
+                // TODO: Check the ACL bits
                 valid_found = true
-                fmt.Println("Access GRANTED to ", uidstr)
+                fmt.Println("Access GRANTED to", uidstr)
                 go pulse_gpio(green_led, gpiomap["green_led"].(map[interface{}]interface{})["time"].(int))
                 // TODO: run the relay too
             }
