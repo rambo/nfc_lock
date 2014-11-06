@@ -4,3 +4,9 @@ This package provides interface for provisioning a DESFire EV1 card using data i
 It can set master keys, create or update application by setting application keys and files with their 
 type and permissions.
 
+We need to provision following things:
+* Card master keys
+* Applications
+* Application keys
+* Application files
+
