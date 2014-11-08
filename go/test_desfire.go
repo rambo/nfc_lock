@@ -41,6 +41,15 @@ func main() {
 		for i := 0; i < len(apps); i++ {
 			app := apps[i]
 			fmt.Printf("App 0x%x (%d)\n", app.Aid(), app.Aid())
+			error := desfiretag.SelectApplication(app)
+            if error != nil {
+                panic(error)
+            }
+    		files, error := desfiretag.FileIds()
+            if error != nil {
+                panic(error)
+            }
+            fmt.Println(files);
 		}
 	}
 }
