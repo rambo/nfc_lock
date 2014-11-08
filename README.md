@@ -3,17 +3,30 @@ nfc_lock
 
 (more) secure electric lock with DESFire EV1 NFC tags
 
+## libnfc and libfreefare
+
+Ubuntu 14.04 has libnfc but no libfreefare, use [this PPA](https://launchpad.net/~christopher-hoskin/+archive/ubuntu/ppa)
+
+    sudo apt-add-repository ppa:christopher-hoskin/ppa
+    sudo apt-get update
+    sudo apt-get install libnfc5 libnfc-bin libnfc-pn53x-examples libnfc-examples
+    sudo apt-get install libfreefare0 libfreefare-bin 
+    sudo apt-get install golang mercurial git-core
+
+### RasPi
+
+Install the debs from [./raspi/debs/](./raspi/debs/) (or compile them using source debs from Jessie)
 
 ## Go
 
 Install Go and some deps you are going to need when fetching Go libraries
 
-    apt-get install golang mercurial git-core
+    sudo apt-get install golang mercurial git-core
 
 Make sure your GOPATH is set
 
-    mkdir $HOME/go
-    export GOPATH=$HOME/go
+    mkdir $HOME/.go
+    export GOPATH=$HOME/.go
     export PATH=$PATH:$GOPATH/bin
 
 Install library dependencies
@@ -33,4 +46,14 @@ See https://xivilization.net/~marek/blog/2014/06/10/go-1-dot-2-for-raspberry-pi/
     sudo apt-get install apt-transport-https
 
 Then edit `/etc/apt/sources.list.d/xivilization-raspbian.list` and switch to https
+
+## Terms
+
+  - Card (PICC in NXP terms): The DESFire EV1 chip+antenna in a package (fob, card, sticker...)
+  - Personalisation step: Where card default master key is changed and applications are defined.
+  - Application: collection of files on the card, application can have multiple keys for various purposes
+  - Provisioning step: Where a personalized card is issued to a card holder and the card (plus backing datababase) is updated with relevant info
+  - Diversified key: Key that has been derived from a master key via the method described in NXP AN19022
+  
+  
 

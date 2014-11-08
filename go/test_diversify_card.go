@@ -7,7 +7,7 @@ import (
     "encoding/hex"
     "github.com/fuzxxl/nfc/2.0/nfc"    
     "github.com/fuzxxl/freefare/0.3/freefare"
-    "github.com/jacobsa/crypto/cmac"
+    "./keydiversification"
 )
 
 func main() {
@@ -47,6 +47,8 @@ func main() {
     }
     fmt.Println(aid)
 
+    sysid := make([]byte, 0);
+
 
     d, err := nfc.Open("");
     if err != nil {
@@ -60,29 +62,20 @@ func main() {
 
     for i := 0; i < len(tags); i++ {
         tag := tags[i]
-        uidstr := tag.UID()
-        uidbytes, err := hex.DecodeString(uidstr);
+        uid_str := tag.UID()
+        uid, err := hex.DecodeString(uid_str);
         if err != nil {
             panic(err);
         }
-        fmt.Println(uidstr)
-        fmt.Println(uidbytes)
+        fmt.Println(uid_str)
+        fmt.Println(uid)
 
-    	uidaid := make([]byte, len(uidbytes)+len(aid)+1)
-    	uidaid[0] =0x01
-    	copy(uidaid[1:], uidbytes)
-    	copy(uidaid[len(uidbytes)+1:], aid)
+        fmt.Printf("Found tag %s\n", uid_str)
 
-        fmt.Printf("Found tag %s\n", uidstr)
-
-        CMAC, err := cmac.New(appkey)
+        dkey, err := keydiversification.AES128(appkey, aid, uid, sysid);
         if err != nil {
-            panic(err)
+            panic(err);
         }
-
-        // This never returns error
-        CMAC.Write(uidaid)
-        dkey := CMAC.Sum(uidaid)[len(uidaid):]
         
         fmt.Println(hex.EncodeToString(dkey))
     }
