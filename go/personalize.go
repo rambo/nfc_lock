@@ -12,14 +12,14 @@ import (
 )
 
 // TODO: move to a separate helper module
-func string_to_aeskey(keydata_str string) (NewDESFireAESKey, error) {
+func string_to_aeskey(keydata_str string) (*freefare.DESFireKey, error) {
     keydata := new([16]byte)
     to_keydata, err := hex.DecodeString(keydata_str)
     if err != nil {
-        return nil,err
+        key := freefare.NewDESFireAESKey(*keydata, 0)
+        return key, err
     }
     copy(keydata[0:], to_keydata)
-    fmt.Println(new_master_keydata)
     key := freefare.NewDESFireAESKey(*keydata, 0)
     return key,nil
 }
@@ -66,6 +66,27 @@ func main() {
         panic(err)
     }
     fmt.Println(new_master_key)
+
+    uid_read_key, err := string_to_aeskey(keymap["uid_read_key"].(string))
+    if err != nil {
+        panic(err)
+    }
+    fmt.Println(uid_read_key)
+    
+    prov_key_base, err := hex.DecodeString(keymap["prov_master"].(string))
+    if err != nil {
+        panic(err)
+    }
+    acl_read_base, err := hex.DecodeString(keymap["acl_read_key"].(string))
+    if err != nil {
+        panic(err)
+    }
+    acl_write_base, err := hex.DecodeString(keymap["acl_write_key"].(string))
+    if err != nil {
+        panic(err)
+    }
+
+
 
     d, err := nfc.Open("");
     if err != nil {
