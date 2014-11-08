@@ -1,6 +1,5 @@
-uidapp:
-    read:  DEADBEEFDEADBEEFDEADBEEFDEADBEEF
-    write: C0FFFEEEC0FFFEEEC0FFFEEEC0FFFEEE
-aclapp:
-    read:  DEADBABEDEADBABEDEADBABEDEADBABE
-    write: CAFFFEEECAFFFEEECAFFFEEECAFFFEEE
+card_master:   DEADBEEFDEADBEEFDEADBEEFDEADBEEF # Static, keep only on the personalization workstation!
+prov_master:   C0FFFEEEC0FFFEEEC0FFFEEEC0FFFEEE # Diversified, used for RW for all application files, keep only on provisioning workstation!
+uid_read_key:  DEADBABEDEADBABEDEADBABEDEADBABE # Static, use only to get the real card UID when random IDs are enabled
+acl_read_key:  CAFFFEEECAFFFEEECAFFFEEECAFFFEEE # Diversified, use to read the ACL file
+acl_write_key: FEEDDEEDFEEDDEEDFEEDDEEDFEEDDEED # Diversified, use to update the ACL file

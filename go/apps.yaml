@@ -1,9 +1,5 @@
-uidapp:
-    aid: "031337"
-    readkeyid:  C
-    writekeyid: D
-aclapp:
-    aid: "041337"
-    readkeyid:  E
-    writekeyid: F
-    require_acl: 1
+hacklab_acl: # all values are hex-encoded, wrap them in quotes to make sure they are strings
+    aid: "031337" 
+    uid_read_key_id: "02"
+    acl_read_key_id: "03"
+    acl_write_key_id: "04"
