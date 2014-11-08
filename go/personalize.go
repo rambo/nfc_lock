@@ -5,18 +5,30 @@ import (
     "io/ioutil"
     "fmt"
     "encoding/hex"
+    "encoding/binary"
     "github.com/fuzxxl/nfc/2.0/nfc"    
     "github.com/fuzxxl/freefare/0.3/freefare"
 //    "./keydiversification"
 )
+
+// TODO: move to a separate helper module
+func string_to_aeskey(keydata_str string) (NewDESFireAESKey, error) {
+    keydata := new([16]byte)
+    to_keydata, err := hex.DecodeString(keydata_str)
+    if err != nil {
+        return nil,err
+    }
+    copy(keydata[0:], to_keydata)
+    fmt.Println(new_master_keydata)
+    key := freefare.NewDESFireAESKey(*keydata, 0)
+    return key,nil
+}
 
 func main() {
     keys_data, err := ioutil.ReadFile("keys.yaml")
     if err != nil {
         panic(err)
     }
-    
-    
 
     keymap := make(map[interface{}]interface{});
     err = yaml.Unmarshal([]byte(keys_data), &keymap);
@@ -35,19 +47,25 @@ func main() {
         panic(err)
     }
 
-    nullkeydata := new([8]byte)
-    defaultkey := freefare.NewDESFireDESKey(*nullkeydata)
-    
-    newkeydata := new([16]byte)
-    newkeydata_str := keymap["card_master"].(string)
-    to_newkeydata, err := hex.DecodeString(newkeydata_str)
+    aidbytes, err := hex.DecodeString(appmap["hacklab_acl"].(map[interface{}]interface{})["aid"].(string))
     if err != nil {
         panic(err)
     }
-    copy(newkeydata[0:], to_newkeydata)
-    fmt.Println(newkeydata)
-    newkey := freefare.NewDESFireAESKey(*newkeydata, 0)
-    fmt.Println(newkey)
+    aidint, n := binary.Uvarint(aidbytes)
+    if n <= 0 {
+        panic(fmt.Sprintf("binary.Uvarint returned %d", n))
+    }
+    aid := freefare.NewDESFireAid(uint32(aidint))
+    fmt.Println(aid)
+
+    nullkeydata := new([8]byte)
+    defaultkey := freefare.NewDESFireDESKey(*nullkeydata)
+
+    new_master_key, err := string_to_aeskey(keymap["card_master"].(string))
+    if err != nil {
+        panic(err)
+    }
+    fmt.Println(new_master_key)
 
     d, err := nfc.Open("");
     if err != nil {
@@ -83,7 +101,7 @@ func main() {
 		error = desfiretag.Authenticate(0,*defaultkey)
 		if error != nil {
 		    fmt.Println("Failed, trying agin with new key")
-    		error = desfiretag.Authenticate(0,*newkey)
+    		error = desfiretag.Authenticate(0,*new_master_key)
     		if error != nil {
                 panic(error)
             }
@@ -91,13 +109,37 @@ func main() {
         fmt.Println("Done");
 
 
-        fmt.Println("Changing key");
-        error = desfiretag.ChangeKey(0, *newkey, *defaultkey);
+        fmt.Println("Changing default key");
+        error = desfiretag.ChangeKey(0, *new_master_key, *defaultkey);
 		if error != nil {
 			panic(error)
 		}
         fmt.Println("Done");
 
+
+        fmt.Println("Creating application");
+        // TODO:Figure out what the settings byte (now hardcoded to 0xFF as it was in libfreefare exampkle code) actually does
+        error = desfiretag.CreateApplication(aid, 0xFF, 6 | freefare.CryptoAES);
+		if error != nil {
+			panic(error)
+		}
+        fmt.Println("Done");
+
+
+        fmt.Println("Selecting application");
+        // TODO:Figure out what the settings byte (now hardcoded to 0xFF as it was in libfreefare exampkle code) actually does
+        error = desfiretag.SelectApplication(aid);
+		if error != nil {
+			panic(error)
+		}
+        fmt.Println("Done");
+
+        fmt.Println("Changing static auth key");
+        error = desfiretag.ChangeKey(0, *new_master_key, *defaultkey);
+		if error != nil {
+			panic(error)
+		}
+        fmt.Println("Done");
 
 
 
