@@ -19,7 +19,7 @@ import (
  * @param []byte systemid The "System ID" this can be anything as long as it's constant and not too long
  * @return ([]byte, error) The new key and error if any
  */
-func aes128(key []byte, aid []byte, uid []byte, systemid []byte) ([]byte, error) {
+func AES128(key []byte, aid []byte, uid []byte, systemid []byte) ([]byte, error) {
 
     message := make([]byte, len(uid)+len(aid)+len(systemid)+1)
     message[0] =0x01
