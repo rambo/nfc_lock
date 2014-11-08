@@ -1,4 +1,4 @@
-hacklab_acl: # all values are hex-encoded, wrap them in quotes to make sure they are strings
+hacklab_acl: # all values are hex-encoded, wrap them in quotes to make sure they are interpreted as strings
     aid: "031337" 
     uid_read_key_id: "02"
     acl_read_key_id: "03"
