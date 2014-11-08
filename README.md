@@ -47,3 +47,13 @@ See https://xivilization.net/~marek/blog/2014/06/10/go-1-dot-2-for-raspberry-pi/
 
 Then edit `/etc/apt/sources.list.d/xivilization-raspbian.list` and switch to https
 
+## Terms
+
+  - Card (PICC in NXP terms): The DESFire EV1 chip+antenna in a package (fob, card, sticker...)
+  - Personalisation step: Where card default master key is changed and applications are defined.
+  - Application: collection of files on the card, application can have multiple keys for various purposes
+  - Provisioning step: Where a personalized card is issued to a card holder and the card (plus backing datababase) is updated with relevant info
+  - Diversified key: Key that has been derived from a master key via the method described in NXP AN19022
+  
+  
+
