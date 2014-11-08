@@ -29,7 +29,7 @@ func AES128(key []byte, aid []byte, uid []byte, systemid []byte) ([]byte, error)
 
     mac, err := cmac.New(key)
     if err != nil {
-        return message, err
+        return nil, err
     }
 
     // This always succeeds
