@@ -170,6 +170,22 @@ func main() {
             if error != nil {
                 panic(error)
             }
+            fmt.Println("Changing key back to default")
+            error = desfiretag.ChangeKey(0,  *defaultkey, *new_master_key);
+            if error != nil {
+                panic(error)
+            }
+            fmt.Println("Re-auth with default key")
+            error = desfiretag.Authenticate(0,*defaultkey)
+            if error != nil {
+                panic(error)
+            }
+            fmt.Println("Formatting (to get a clean state)")
+            error = desfiretag.FormatPICC()
+            if error != nil {
+                panic(error)
+            }
+            return
         }
         fmt.Println("Done");
 
@@ -208,6 +224,14 @@ func main() {
         }
         fmt.Println("Done");
 
+        /**
+         * This is not needed for creating the application and does not help when changing application keys
+        fmt.Println("Re-auth with new key")
+        error = desfiretag.Authenticate(0,*new_master_key)
+        if error != nil {
+            panic(error)
+        }
+         */
 
         fmt.Println("Creating application");
         // TODO:Figure out what the settings byte (now hardcoded to 0xFF as it was in libfreefare example code) actually does
@@ -225,6 +249,9 @@ func main() {
             panic(error)
         }
         fmt.Println("Done");
+
+
+        // Should we re-auth here ??
 
         fmt.Println("Changing static UID reading key");
         error = desfiretag.ChangeKey(uid_read_key_id, *uid_read_key, *defaultkey);
