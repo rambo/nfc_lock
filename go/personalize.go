@@ -21,16 +21,16 @@ func main() {
         os.Exit(1)
     }
 
-	newmid64, error := strconv.ParseUint(os.Args[1], 10, 16)
-	if (error != nil) {
-	    panic(error)
-	}
-	newmid := uint16(newmid64)
+    newmid64, error := strconv.ParseUint(os.Args[1], 10, 16)
+    if (error != nil) {
+         panic(error)
+    }
+    newmid := uint16(newmid64)
 
     newacl, error := strconv.ParseUint(os.Args[2], 16, 64)
-	if (error != nil) {
-	    panic(error)
-	}
+    if (error != nil) {
+         panic(error)
+    }
 
     newaclbytes := make([]byte, 8)
     n := binary.PutUvarint(newaclbytes, newacl)
