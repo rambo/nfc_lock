@@ -311,6 +311,8 @@ func main() {
         }
         fmt.Println("Done");
 
+        /**
+         * Only needed when working with backup files
         // Not sure if this is actually needed
         fmt.Println("Committing");
         error = desfiretag.CommitTransaction()
@@ -318,6 +320,7 @@ func main() {
             panic(error)
         }
         fmt.Println("Done");
+         */
 
 
         fmt.Println("Disconnecting");
