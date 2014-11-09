@@ -50,9 +50,9 @@ Then edit `/etc/apt/sources.list.d/xivilization-raspbian.list` and switch to htt
 ## Terms
 
   - Card (PICC in NXP terms): The DESFire EV1 chip+antenna in a package (fob, card, sticker...)
-  - Personalisation step: Where card default master key is changed and applications are defined.
+  - Pre-Personalization step: Where card default master key is changed and applications are defined.
   - Application: collection of files on the card, application can have multiple keys for various purposes
-  - Provisioning step: Where a personalized card is issued to a card holder and the card (plus backing datababase) is updated with relevant info
+  - Provisioning (or personalization) step: Where a personalized card is issued to a card holder and the card (plus backing datababase) is updated with relevant info
   - Diversified key: Key that has been derived from a master key via the method described in NXP AN19022
   
   
