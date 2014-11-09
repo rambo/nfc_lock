@@ -3,7 +3,6 @@ package main
 import (
     "fmt"
     "encoding/hex"
-    "encoding/binary"
     "github.com/fuzxxl/nfc/2.0/nfc"    
     "github.com/fuzxxl/freefare/0.3/freefare"
     "./keydiversification"
@@ -22,18 +21,14 @@ func main() {
         panic(err)
     }
 
-    // Application-id from config
-    aidbytes, err := hex.DecodeString(appmap["hacklab_acl"].(map[interface{}]interface{})["aid"].(string))
+    // Application-id
+    aid, err := helpers.String2aid(appmap["hacklab_acl"].(map[interface{}]interface{})["aid"].(string))
     if err != nil {
         panic(err)
     }
-    aidint, n := binary.Uvarint(aidbytes)
-    if n <= 0 {
-        panic(fmt.Sprintf("binary.Uvarint returned %d", n))
-    }
-    aid := freefare.NewDESFireAid(uint32(aidint))
-    //fmt.Println(aid)
+
     // Needed for diversification
+    aidbytes := helpers.Aid2bytes(aid)
     sysid, err := hex.DecodeString(appmap["hacklab_acl"].(map[interface{}]interface{})["sysid"].(string))
     if err != nil {
         panic(err)
