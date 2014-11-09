@@ -50,6 +50,14 @@ func main() {
     if err != nil {
         panic(err)
     }
+    acl_file_id, err := helpers.String2byte(appmap["hacklab_acl"].(map[interface{}]interface{})["acl_file_id"].(string))
+    if err != nil {
+        panic(err)
+    }
+    mid_file_id, err := helpers.String2byte(appmap["hacklab_acl"].(map[interface{}]interface{})["mid_file_id"].(string))
+    if err != nil {
+        panic(err)
+    }
 
     // The static app key to read UID
     uid_read_key, err := helpers.String2aeskey(keymap["uid_read_key"].(string))
@@ -136,7 +144,7 @@ func main() {
 
         aclbytes := make([]byte, 8)
         fmt.Println("Reading ACL data file")
-        bytesread, err := desfiretag.ReadData(0,0, aclbytes)
+        bytesread, err := desfiretag.ReadData(acl_file_id, 0, aclbytes)
         if error != nil {
             panic(error)
         }
@@ -148,6 +156,23 @@ func main() {
             panic(fmt.Sprintf("binary.Uvarint returned %d", n))
         }
         fmt.Println("acl:", acl)
+
+        midbytes := make([]byte, 2)
+        fmt.Println("Reading member-id data file")
+        bytesread, err = desfiretag.ReadData(mid_file_id, 0, midbytes)
+        if error != nil {
+            panic(error)
+        }
+        if (bytesread < 2) {
+            //panic(fmt.Sprintf("ReadData read %d bytes, 2 expected", bytesread))
+            fmt.Println(fmt.Sprintf("ReadData read %d bytes, 2 expected", bytesread))
+        }
+        mid, n := binary.Uvarint(midbytes)
+        if n <= 0 {
+            panic(fmt.Sprintf("binary.Uvarint returned %d", n))
+        }
+        fmt.Println("mid:", mid)
+
 
 
         fmt.Println("Disconnecting");
