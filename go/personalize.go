@@ -2,6 +2,8 @@ package main
 
 import (
     "fmt"
+    "os"
+    "strconv"
     "encoding/hex"
     "encoding/binary"
     "github.com/fuzxxl/nfc/2.0/nfc"    
@@ -13,9 +15,22 @@ import (
 
 
 func main() {
-    // TODO: read from input
-    newmid := uint16(1230)
-    newacl := uint64(3)
+    if (len(os.Args) < 3) {
+        fmt.Println("Usage:")
+        fmt.Println(fmt.Sprintf("  %s member-id-as-decimal acl-value-as-hex", os.Args[0]))
+        os.Exit(1)
+    }
+
+	newmid64, error := strconv.ParseUint(os.Args[1], 10, 16)
+	if (error != nil) {
+	    panic(error)
+	}
+	newmid := uint16(newmid64)
+
+    newacl, error := strconv.ParseUint(os.Args[2], 16, 64)
+	if (error != nil) {
+	    panic(error)
+	}
 
     newaclbytes := make([]byte, 8)
     n := binary.PutUvarint(newaclbytes, newacl)

@@ -29,6 +29,7 @@ func Bytes2aeskey(source []byte) (*freefare.DESFireKey) {
 }
 
 func String2byte(source string) (byte, error) {
+    // TODO: would strconv.ParseUint be less contrived ? probably not...
     bytearray, err := hex.DecodeString(source)
     if err != nil {
         return 0x0, err
