@@ -184,6 +184,11 @@ func main() {
             if error != nil {
                 panic(error)
             }
+            fmt.Println("Disabling random id")
+            error = desfiretag.SetConfiguration(false, false)
+            if error != nil {
+                panic(error)
+            }
             fmt.Println("Formatting (to get a clean state)")
             error = desfiretag.FormatPICC()
             if error != nil {
@@ -284,7 +289,6 @@ func main() {
         }
         fmt.Println("Done");
 
-
         fmt.Println("Re-auth with null AES key")
         error = desfiretag.Authenticate(uid_read_key_id,*defaultkey_aes)
         if error != nil {
@@ -350,6 +354,17 @@ func main() {
         // Not sure if this is actually needed
         fmt.Println("Committing");
         error = desfiretag.CommitTransaction()
+        if error != nil {
+            panic(error)
+        }
+        fmt.Println("Done");
+         */
+
+
+        /**
+         * Enable this only when 100% everything else works perfectly    
+        fmt.Println("Enabling random ID");
+        error = desfiretag.SetConfiguration(false, true)
         if error != nil {
             panic(error)
         }
