@@ -9,53 +9,11 @@ import (
     "github.com/fuzxxl/nfc/2.0/nfc"    
     "github.com/fuzxxl/freefare/0.3/freefare"
     "./keydiversification"
+    "./helpers"
 )
 
 // TODO: move to a separate helper module
-func string_to_aeskey(keydata_str string) (*freefare.DESFireKey, error) {
-    keydata := new([16]byte)
-    to_keydata, err := hex.DecodeString(keydata_str)
-    if err != nil {
-        key := freefare.NewDESFireAESKey(*keydata, 0)
-        return key, err
-    }
-    copy(keydata[0:], to_keydata)
-    key := freefare.NewDESFireAESKey(*keydata, 0)
-    return key,nil
-}
 
-func bytes_to_aeskey(source []byte) (*freefare.DESFireKey) {
-    keydata := new([16]byte)
-    copy(keydata[0:], source)
-    key := freefare.NewDESFireAESKey(*keydata, 0)
-    return key
-}
-
-func string_to_byte(source string) (byte, error) {
-    bytearray, err := hex.DecodeString(source)
-    if err != nil {
-        return 0x0, err
-    }
-    return bytearray[0], nil
-}
-
-func applicationsettings(accesskey byte, frozen, req_auth_fileops, req_auth_dir, allow_master_key_chg bool) byte {
-    ret := byte(0)
-    ret |= accesskey << 4
-    if (frozen) {
-        ret |= 1 << 3
-    }
-    if (req_auth_fileops) {
-        ret |= 1 << 2
-    }
-    if (req_auth_dir) {
-        ret |= 1 << 1;
-    }
-    if (allow_master_key_chg) {
-        ret |= 1;
-    }
-    return ret
-}
 
 func main() {
     keys_data, err := ioutil.ReadFile("keys.yaml")
@@ -98,19 +56,19 @@ func main() {
     }
 
     // Key id numbers from config
-    uid_read_key_id, err := string_to_byte(appmap["hacklab_acl"].(map[interface{}]interface{})["uid_read_key_id"].(string))
+    uid_read_key_id, err := helpers.String2byte(appmap["hacklab_acl"].(map[interface{}]interface{})["uid_read_key_id"].(string))
     if err != nil {
         panic(err)
     }
-    acl_read_key_id, err := string_to_byte(appmap["hacklab_acl"].(map[interface{}]interface{})["acl_read_key_id"].(string))
+    acl_read_key_id, err := helpers.String2byte(appmap["hacklab_acl"].(map[interface{}]interface{})["acl_read_key_id"].(string))
     if err != nil {
         panic(err)
     }
-    acl_write_key_id, err := string_to_byte(appmap["hacklab_acl"].(map[interface{}]interface{})["acl_write_key_id"].(string))
+    acl_write_key_id, err := helpers.String2byte(appmap["hacklab_acl"].(map[interface{}]interface{})["acl_write_key_id"].(string))
     if err != nil {
         panic(err)
     }
-    prov_key_id, err := string_to_byte(appmap["hacklab_acl"].(map[interface{}]interface{})["provisioning_key_id"].(string))
+    prov_key_id, err := helpers.String2byte(appmap["hacklab_acl"].(map[interface{}]interface{})["provisioning_key_id"].(string))
     if err != nil {
         panic(err)
     }
@@ -124,14 +82,14 @@ func main() {
 
 
     // New card master key
-    new_master_key, err := string_to_aeskey(keymap["card_master"].(string))
+    new_master_key, err := helpers.String2aeskey(keymap["card_master"].(string))
     if err != nil {
         panic(err)
     }
     //fmt.Println(new_master_key)
 
     // The static app key to read UID
-    uid_read_key, err := string_to_aeskey(keymap["uid_read_key"].(string))
+    uid_read_key, err := helpers.String2aeskey(keymap["uid_read_key"].(string))
     if err != nil {
         panic(err)
     }
@@ -232,17 +190,17 @@ func main() {
         if err != nil {
             panic(err)
         }
-        prov_key := bytes_to_aeskey(prov_key_bytes)
+        prov_key := helpers.Bytes2aeskey(prov_key_bytes)
         acl_read_bytes, err := keydiversification.AES128(acl_read_base, aidbytes, realuid, sysid)
         if err != nil {
             panic(err)
         }
-        acl_read_key := bytes_to_aeskey(acl_read_bytes)
+        acl_read_key := helpers.Bytes2aeskey(acl_read_bytes)
         acl_write_bytes, err := keydiversification.AES128(acl_write_base, aidbytes, realuid, sysid)
         if err != nil {
             panic(err)
         }
-        acl_write_key := bytes_to_aeskey(acl_write_bytes)
+        acl_write_key := helpers.Bytes2aeskey(acl_write_bytes)
 
 
         // Start working...
@@ -255,7 +213,7 @@ func main() {
 
         fmt.Println("Creating application");
         // Settings are: only master key may change other keys, configuration is not locked, authentication required for everything, AMK change allowed
-        error = desfiretag.CreateApplication(aid, applicationsettings(0x0, false, true, true, true), freefare.CryptoAES | 6);
+        error = desfiretag.CreateApplication(aid, helpers.Applicationsettings(0x0, false, true, true, true), freefare.CryptoAES | 6);
         if error != nil {
             panic(error)
         }
