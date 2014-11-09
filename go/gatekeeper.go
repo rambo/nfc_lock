@@ -204,6 +204,7 @@ func main() {
             error = desfiretag.SelectApplication(aid);
             if error != nil {
                 // TODO: Retry only on RF-errors
+                _ = desfiretag.Disconnect()
                 errcnt++
                 if errcnt < 3 {
                     fmt.Println(fmt.Sprintf("failed (%s), retrying", error))
@@ -220,6 +221,7 @@ func main() {
             error = desfiretag.Authenticate(uid_read_key_id,*uid_read_key)
             if error != nil {
                 // TODO: Retry only on RF-errors
+                _ = desfiretag.Disconnect()
                 errcnt++
                 if errcnt < 3 {
                     fmt.Println(fmt.Sprintf("failed (%s), retrying", error))
@@ -236,6 +238,7 @@ func main() {
             realuid_str, error := desfiretag.CardUID()
             if error != nil {
                 // TODO: Retry only on RF-errors
+                _ = desfiretag.Disconnect()
                 errcnt++
                 if errcnt < 3 {
                     fmt.Println(fmt.Sprintf("Failed to read card real UID (%s), retrying", error))
@@ -249,6 +252,7 @@ func main() {
             realuid, error := hex.DecodeString(realuid_str)
             if error != nil {
                 fmt.Println(fmt.Sprintf("ERROR: Failed to parse real UID (%s), skipping tag", error))
+                _ = desfiretag.Disconnect()
                 i++
                 errcnt = 0
                 continue
@@ -259,6 +263,7 @@ func main() {
             acl_read_bytes, err := keydiversification.AES128(acl_read_base, aidbytes, realuid, sysid)
             if err != nil {
                 fmt.Println(fmt.Sprintf("ERROR: Failed to get diversified acl_read_key (%s), skipping tag", error))
+                _ = desfiretag.Disconnect()
                 i++
                 errcnt = 0
                 continue
@@ -267,6 +272,7 @@ func main() {
             acl_write_bytes, err := keydiversification.AES128(acl_write_base, aidbytes, realuid, sysid)
             if err != nil {
                 fmt.Println(fmt.Sprintf("ERROR: Failed to get diversified acl_write_key (%s), skipping tag", error))
+                _ = desfiretag.Disconnect()
                 i++
                 errcnt = 0
                 continue
@@ -277,6 +283,7 @@ func main() {
             error = desfiretag.Authenticate(acl_read_key_id,*acl_read_key)
             if error != nil {
                 // TODO: Retry only on RF-errors
+                _ = desfiretag.Disconnect()
                 errcnt++
                 if errcnt < 3 {
                     fmt.Println(fmt.Sprintf("failed (%s), retrying", error))
@@ -294,6 +301,7 @@ func main() {
             bytesread, err := desfiretag.ReadData(acl_file_id, 0, aclbytes)
             if error != nil {
                 // TODO: Retry only on RF-errors
+                _ = desfiretag.Disconnect()
                 errcnt++
                 if errcnt < 3 {
                     fmt.Println(fmt.Sprintf("failed (%s), retrying", error))
@@ -310,11 +318,13 @@ func main() {
             acl, n := binary.Uvarint(aclbytes)
             if n <= 0 {
                 fmt.Println(fmt.Sprintf("ERROR: binary.Uvarint returned %d, skipping tag", n))
+                _ = desfiretag.Disconnect()
                 i++
                 errcnt = 0
                 continue
             }
-            fmt.Println("DEBUG: acl:", acl)
+            fmt.Println("Done")
+            //fmt.Println("DEBUG: acl:", acl)
 
             // Check for revoked key
             revoked_found := false
@@ -379,6 +389,7 @@ func main() {
                     error = desfiretag.Authenticate(acl_write_key_id,*acl_write_key)
                     if error != nil {
                         // TODO: Retry only on RF-errors
+                        _ = desfiretag.Disconnect()
                         errcnt++
                         if errcnt < 3 {
                             fmt.Println(fmt.Sprintf("failed (%s), retrying", error))
@@ -396,6 +407,7 @@ func main() {
                     n := binary.PutUvarint(newaclbytes, db_acl)
                     if (n < 0) {
                         fmt.Println(fmt.Sprintf("binary.PutUvarint returned %d, skipping tag", n))
+                        _ = desfiretag.Disconnect()
                         i++
                         errcnt = 0
                         continue TagLoop
@@ -404,6 +416,7 @@ func main() {
                     bytewritten, error := desfiretag.WriteData(acl_file_id, 0, newaclbytes)
                     if error != nil {
                         fmt.Println(fmt.Sprintf("failed (%s), skipping tag", error))
+                        _ = desfiretag.Disconnect()
                         i++
                         errcnt = 0
                         continue TagLoop
