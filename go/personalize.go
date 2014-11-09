@@ -273,6 +273,12 @@ func main() {
             panic(error)
         }
         fmt.Println("Done");
+
+        fmt.Println("*** BEGIN: SAVE THIS INFO ***");
+        fmt.Println(fmt.Sprintf("  Member id: %d", newmid))
+        fmt.Println(fmt.Sprintf("  Card UID: %s", realuid_str))
+        fmt.Println("*** END: SAVE THIS INFO ***");
+
     }
 
 }
