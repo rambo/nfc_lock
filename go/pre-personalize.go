@@ -225,6 +225,7 @@ func main() {
         if error != nil {
             panic(error)
         }
+        //fmt.Println("realuid:", hex.EncodeToString(realuid));
 
         // Calculate the diversified keys
         prov_key_bytes, err := keydiversification.AES128(prov_key_base, aidbytes, realuid, sysid)
@@ -244,6 +245,7 @@ func main() {
         acl_write_key := bytes_to_aeskey(acl_write_bytes)
 
 
+        // Start working...
         fmt.Println("Changing default master key");
         error = desfiretag.ChangeKey(0, *new_master_key, *defaultkey);
         if error != nil {
@@ -251,23 +253,13 @@ func main() {
         }
         fmt.Println("Done");
 
-        /**
-         * This is not needed for creating the application and does not help when changing application keys
-        fmt.Println("Re-auth with new key")
-        error = desfiretag.Authenticate(0,*new_master_key)
-        if error != nil {
-            panic(error)
-        }
-         */
-
         fmt.Println("Creating application");
-        // TODO:Figure out what the settings byte (now hardcoded to 0xFF as it was in libfreefare example code) actually does
+        // Settings are: only master key may change other keys, configuration is not locked, authentication required for everything, AMK change allowed
         error = desfiretag.CreateApplication(aid, applicationsettings(0x0, false, true, true, true), freefare.CryptoAES | 6);
         if error != nil {
             panic(error)
         }
         fmt.Println("Done");
-
 
         fmt.Println("Selecting application");
         error = desfiretag.SelectApplication(aid);
@@ -275,24 +267,6 @@ func main() {
             panic(error)
         }
         fmt.Println("Done");
-
-        /**
-         * Does not work
-        fmt.Println("Re-auth with new master key")
-        error = desfiretag.Authenticate(0,*new_master_key)
-        if error != nil {
-            panic(error)
-        }
-         */
-
-        /**
-         * Also does not work
-        fmt.Println("Re-auth with default key")
-        error = desfiretag.Authenticate(0,*defaultkey)
-        if error != nil {
-            panic(error)
-        }
-         */
 
         fmt.Println("Re-auth with null AES key")
         error = desfiretag.Authenticate(prov_key_id,*defaultkey_aes)
