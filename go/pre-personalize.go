@@ -58,6 +58,14 @@ func main() {
     if err != nil {
         panic(err)
     }
+    acl_file_id, err := helpers.String2byte(appmap["hacklab_acl"].(map[interface{}]interface{})["acl_file_id"].(string))
+    if err != nil {
+        panic(err)
+    }
+    mid_file_id, err := helpers.String2byte(appmap["hacklab_acl"].(map[interface{}]interface{})["mid_file_id"].(string))
+    if err != nil {
+        panic(err)
+    }
 
     // Defaul (null) key
     nullkeydata := new([8]byte)
@@ -257,7 +265,14 @@ func main() {
 
 
         fmt.Println("Creating ACL data file");
-        error = desfiretag.CreateDataFile(0, freefare.Enciphered, freefare.MakeDESFireAccessRights(acl_read_key_id, acl_write_key_id, prov_key_id, prov_key_id), 8, true)
+        error = desfiretag.CreateDataFile(acl_file_id, freefare.Enciphered, freefare.MakeDESFireAccessRights(acl_read_key_id, acl_write_key_id, prov_key_id, prov_key_id), 8, true)
+        if error != nil {
+            panic(error)
+        }
+        fmt.Println("Done");
+
+        fmt.Println("Creating member-id data file");
+        error = desfiretag.CreateDataFile(mid_file_id, freefare.Enciphered, freefare.MakeDESFireAccessRights(acl_read_key_id, prov_key_id, prov_key_id, prov_key_id), 2, true)
         if error != nil {
             panic(error)
         }
