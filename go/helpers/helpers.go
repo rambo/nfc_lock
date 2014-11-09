@@ -1,8 +1,10 @@
 package helpers
 
 import (
+    "io/ioutil"
     "encoding/hex"
 //    "encoding/binary"
+    "gopkg.in/yaml.v2"
     "github.com/fuzxxl/freefare/0.3/freefare"
 )
 
@@ -50,4 +52,21 @@ func Applicationsettings(accesskey byte, frozen, req_auth_fileops, req_auth_dir,
         ret |= 1;
     }
     return ret
+}
+
+
+func LoadYAMLFile(filepath string) (map[interface{}]interface{}, error)  {
+    retmap := make(map[interface{}]interface{})
+
+    filedata, err := ioutil.ReadFile(filepath)
+    if err != nil {
+        return retmap, err
+    }
+
+    err = yaml.Unmarshal([]byte(filedata), &retmap)
+    if err != nil {
+        return retmap, err
+    }
+
+    return retmap, nil
 }

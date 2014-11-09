@@ -1,8 +1,6 @@
 package main
 
 import (
-    "gopkg.in/yaml.v2"
-    "io/ioutil"
     "fmt"
     "encoding/hex"
     "encoding/binary"
@@ -16,24 +14,12 @@ import (
 
 
 func main() {
-    keys_data, err := ioutil.ReadFile("keys.yaml")
+    keymap, err := helpers.LoadYAMLFile("keys.yaml")
     if err != nil {
         panic(err)
     }
 
-    keymap := make(map[interface{}]interface{});
-    err = yaml.Unmarshal([]byte(keys_data), &keymap);
-    if err != nil {
-        panic(err)
-    }
-
-    apps_data, err := ioutil.ReadFile("apps.yaml")
-    if err != nil {
-        panic(err)
-    }
-
-    appmap := make(map[interface{}]interface{});
-    err = yaml.Unmarshal([]byte(apps_data), &appmap);
+    appmap, err := helpers.LoadYAMLFile("apps.yaml")
     if err != nil {
         panic(err)
     }
