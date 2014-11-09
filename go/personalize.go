@@ -254,12 +254,15 @@ func main() {
             }
             fmt.Println("Done");
 
+            /**
+             * For some reason this gives the dreaded "unknown error"
             fmt.Println("Committing");
             error = desfiretag.CommitTransaction()
             if error != nil {
                 panic(error)
             }
             fmt.Println("Done");
+             */
         }
 
 
