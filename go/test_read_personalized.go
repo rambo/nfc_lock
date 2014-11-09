@@ -163,6 +163,7 @@ func main() {
         if error != nil {
             panic(error)
         }
+        // TODO: make a helper that repeatedly reads until we're past the buffer or readbytes == 0
         if (bytesread < 2) {
             //panic(fmt.Sprintf("ReadData read %d bytes, 2 expected", bytesread))
             fmt.Println(fmt.Sprintf("ReadData read %d bytes, 2 expected", bytesread))
