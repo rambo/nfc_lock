@@ -262,7 +262,7 @@ func main() {
 
         fmt.Println("Creating application");
         // TODO:Figure out what the settings byte (now hardcoded to 0xFF as it was in libfreefare example code) actually does
-        error = desfiretag.CreateApplication(aid, applicationsettings(0xE, false, true, true, true), freefare.CryptoAES | 6);
+        error = desfiretag.CreateApplication(aid, applicationsettings(0x0, false, true, true, true), freefare.CryptoAES | 6);
         if error != nil {
             panic(error)
         }
@@ -307,20 +307,13 @@ func main() {
         }
         fmt.Println("Done");
 
-        /**
-         * Not needed ATM
         fmt.Println("Re-auth with provisioning key")
         error = desfiretag.Authenticate(prov_key_id,*prov_key)
         if error != nil {
             panic(error)
         }
-         */
 
-        fmt.Println("Re-auth with null AES key")
-        error = desfiretag.Authenticate(acl_read_key_id,*defaultkey_aes)
-        if error != nil {
-            panic(error)
-        }
+
         fmt.Println("Changing ACL reading key");
         error = desfiretag.ChangeKey(acl_read_key_id, *acl_read_key, *defaultkey_aes);
         if error != nil {
