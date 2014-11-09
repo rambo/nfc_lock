@@ -11,7 +11,24 @@ import (
 )
 
 
+
 func main() {
+    // TODO: read from input
+    newmid := uint16(1230)
+    newacl := uint64(3)
+
+    newaclbytes := make([]byte, 8)
+    n := binary.PutUvarint(newaclbytes, newacl)
+    if (n < 0) {
+        panic(fmt.Sprintf("binary.PutUvarint returned %d", n))
+    }
+    newmidbytes := make([]byte, 2)
+    n = binary.PutUvarint(newmidbytes, uint64(newmid))
+    if (n < 0) {
+        panic(fmt.Sprintf("binary.PutUvarint returned %d", n))
+    }
+
+
     keymap, err := helpers.LoadYAMLFile("keys.yaml")
     if err != nil {
         panic(err)
@@ -48,6 +65,10 @@ func main() {
     if err != nil {
         panic(err)
     }
+    prov_key_id, err := helpers.String2byte(appmap["hacklab_acl"].(map[interface{}]interface{})["provisioning_key_id"].(string))
+    if err != nil {
+        panic(err)
+    }
     acl_file_id, err := helpers.String2byte(appmap["hacklab_acl"].(map[interface{}]interface{})["acl_file_id"].(string))
     if err != nil {
         panic(err)
@@ -66,6 +87,10 @@ func main() {
 
     // Bases for the diversified keys    
     acl_read_base, err := hex.DecodeString(keymap["acl_read_key"].(string))
+    if err != nil {
+        panic(err)
+    }
+    prov_key_base, err := hex.DecodeString(keymap["prov_master"].(string))
     if err != nil {
         panic(err)
     }
@@ -134,6 +159,12 @@ func main() {
         }
         acl_read_key := helpers.Bytes2aeskey(acl_read_bytes)
 
+        prov_key_bytes, err := keydiversification.AES128(prov_key_base, aidbytes, realuid, sysid)
+        if err != nil {
+            panic(err)
+        }
+        prov_key := helpers.Bytes2aeskey(prov_key_bytes)
+
         fmt.Println("Re-auth with ACL read key")
         error = desfiretag.Authenticate(acl_read_key_id,*acl_read_key)
         if error != nil {
@@ -147,7 +178,8 @@ func main() {
             panic(error)
         }
         if (bytesread < 8) {
-            panic(fmt.Sprintf("ReadData read %d bytes, 8 expected", bytesread))
+            //panic(fmt.Sprintf("ReadData read %d bytes, 8 expected", bytesread))
+            fmt.Println(fmt.Sprintf("ReadData read %d bytes, 8 expected", bytesread))
         }
         acl, n := binary.Uvarint(aclbytes)
         if n <= 0 {
@@ -172,6 +204,48 @@ func main() {
         }
         mid := uint16(mid64)
         fmt.Println("mid:", mid)
+
+        if (mid == newmid && acl == newacl) {
+            // Do nothing
+            fmt.Println("No need to update ACL and member-id")
+        } else {
+
+            fmt.Println("Re-auth with provisioning key")
+            error = desfiretag.Authenticate(prov_key_id,*prov_key)
+            if error != nil {
+                panic(error)
+            }
+            fmt.Println("Done");
+            
+            fmt.Println("Writing ACL file")
+            bytewritten, error := desfiretag.WriteData(acl_file_id, 0, newaclbytes)
+            if error != nil {
+                panic(error)
+            }
+            if (bytewritten < 8) {
+                //panic(fmt.Sprintf("WriteData wrote %d bytes, 8 expected", bytewritten))
+                fmt.Println(fmt.Sprintf("WriteData wrote %d bytes, 8 expected", bytewritten))
+            }
+            fmt.Println("Done");
+
+            fmt.Println("Writing member-id file")
+            bytewritten, error = desfiretag.WriteData(mid_file_id, 0, newmidbytes)
+            if error != nil {
+                panic(error)
+            }
+            if (bytewritten < 2) {
+                //panic(fmt.Sprintf("WriteData wrote %d bytes, 2 expected", bytewritten))
+                fmt.Println(fmt.Sprintf("WriteData wrote %d bytes, 2 expected", bytewritten))
+            }
+            fmt.Println("Done");
+
+            fmt.Println("Committing");
+            error = desfiretag.CommitTransaction()
+            if error != nil {
+                panic(error)
+            }
+            fmt.Println("Done");
+        }
 
 
 

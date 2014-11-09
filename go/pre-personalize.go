@@ -10,8 +10,6 @@ import (
     "./helpers"
 )
 
-// TODO: move to a separate helper module
-
 
 func main() {
     keymap, err := helpers.LoadYAMLFile("keys.yaml")
