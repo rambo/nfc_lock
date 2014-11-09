@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/signal"
     "encoding/hex"
+    "encoding/binary"
     "github.com/fuzxxl/nfc/2.0/nfc"    
     "github.com/fuzxxl/freefare/0.3/freefare"    
     "code.google.com/p/go-sqlite/go1/sqlite3"
@@ -232,7 +233,7 @@ func main() {
             }
             realuid, error := hex.DecodeString(realuid_str)
             if error != nil {
-                fmt.Println(fmt.Sprintf("Failed to parse real UID (%s), skipping tag", error))
+                fmt.Println(fmt.Sprintf("ERROR: Failed to parse real UID (%s), skipping tag", error))
                 i++
                 errcnt = 0
                 continue
@@ -261,6 +262,35 @@ func main() {
                 continue
             }
             fmt.Println("Done")
+
+            aclbytes := make([]byte, 8)
+            fmt.Print("Reading ACL data file, ")
+            bytesread, err := desfiretag.ReadData(acl_file_id, 0, aclbytes)
+            if error != nil {
+                // TODO: Retry only on RF-errors
+                errcnt++
+                if errcnt < 3 {
+                    fmt.Println(fmt.Sprintf("failed (%s), retrying", error))
+                    continue
+                }
+                fmt.Println(fmt.Sprintf("failed (%s), retry-count exceeded, skipping tag", error))
+                i++
+                errcnt = 0
+                continue
+            }
+            if (bytesread < 8) {
+                fmt.Println(fmt.Sprintf("WARNING: ReadData read %d bytes, 8 expected", bytesread))
+            }
+            acl, n := binary.Uvarint(aclbytes)
+            if n <= 0 {
+                fmt.Println(fmt.Sprintf("ERROR: binary.Uvarint returned %d, skipping tag", n))
+                i++
+                errcnt = 0
+                continue
+            }
+            fmt.Println("DEBUG: acl:", acl)
+
+
     /*
 
 

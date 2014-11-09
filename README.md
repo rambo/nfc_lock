@@ -54,6 +54,18 @@ Then edit `/etc/apt/sources.list.d/xivilization-raspbian.list` and switch to htt
   - Application: collection of files on the card, application can have multiple keys for various purposes
   - Provisioning (or personalization) step: Where a personalized card is issued to a card holder and the card (plus backing datababase) is updated with relevant info
   - Diversified key: Key that has been derived from a master key via the method described in NXP AN19022
-  
-  
+
+## SQLite for keys
+
+Create a test file `sqlite3 keys.db`:
+
+    CREATE TABLE keys(uid text, acl integer);
+    CREATE TABLE revoked(uid text);
+
+Prepare some tags and insert their (real) UIDs to the grants and revokes
+
+    INSERT INTO revoked VALUES ("04453069b21e80");
+    INSERT INTO keys VALUES ("04212f69b21e80", 1);
+
+In reality you will generate this file based on your person registry (keep track of validity times etc there, then regenerate the keydb for the door)
 
