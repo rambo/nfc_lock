@@ -36,6 +36,10 @@ func clear_and_close(pin gpio.Pin) {
 
 
 func main() {
+    // TODO: configure this somewhere
+    required_acl := uint64(1)
+
+
     keymap, err := helpers.LoadYAMLFile("keys.yaml")
     if err != nil {
         panic(err)
@@ -84,6 +88,10 @@ func main() {
     if err != nil {
         panic(err)
     }
+    acl_write_key_id, err := helpers.String2byte(appmap["hacklab_acl"].(map[interface{}]interface{})["acl_write_key_id"].(string))
+    if err != nil {
+        panic(err)
+    }
 
     // The static app key to read UID
     uid_read_key, err := helpers.String2aeskey(keymap["uid_read_key"].(string))
@@ -93,6 +101,10 @@ func main() {
 
     // Bases for the diversified keys    
     acl_read_base, err := hex.DecodeString(keymap["acl_read_key"].(string))
+    if err != nil {
+        panic(err)
+    }
+    acl_write_base, err := hex.DecodeString(keymap["acl_write_key"].(string))
     if err != nil {
         panic(err)
     }
@@ -243,9 +255,20 @@ func main() {
             // Calculate the diversified keys
             acl_read_bytes, err := keydiversification.AES128(acl_read_base, aidbytes, realuid, sysid)
             if err != nil {
-                panic(err)
+                fmt.Println(fmt.Sprintf("ERROR: Failed to get diversified acl_read_key (%s), skipping tag", error))
+                i++
+                errcnt = 0
+                continue
             }
             acl_read_key := helpers.Bytes2aeskey(acl_read_bytes)
+            acl_write_bytes, err := keydiversification.AES128(acl_write_base, aidbytes, realuid, sysid)
+            if err != nil {
+                fmt.Println(fmt.Sprintf("ERROR: Failed to get diversified acl_write_key (%s), skipping tag", error))
+                i++
+                errcnt = 0
+                continue
+            }
+            acl_write_key := helpers.Bytes2aeskey(acl_write_bytes)
     
             fmt.Print("Re-auth with ACL read key, ")
             error = desfiretag.Authenticate(acl_read_key_id,*acl_read_key)
@@ -290,7 +313,45 @@ func main() {
             }
             fmt.Println("DEBUG: acl:", acl)
 
+            // Check for revoked key
+            revoked_found := false
+            sql := "SELECT rowid, * FROM revoked where uid=?"
+            for s, err := c.Query(sql, realuid_str); err == nil; err = s.Next() {
+                revoked_found = true
+                var rowid int64
+                s.Scan(&rowid, row)     // Assigns 1st column to rowid, the rest to row
+                fmt.Print(fmt.Sprintf("WARNING: Found REVOKED key %s on row %d, ", realuid_str, rowid))
 
+                // TODO: Publish a ZMQ message or something
+
+                fmt.Print("Re-auth with ACL write key, ")
+                error = desfiretag.Authenticate(acl_write_key_id,*acl_write_key)
+                if error != nil {
+                    fmt.Println(fmt.Sprintf("failed (%s), skipping", error))
+                    continue
+                }
+                fmt.Println("Done")
+
+                // Null the ACL file on card
+                nullaclbytes := make([]byte, 8)
+                fmt.Print("Overwriting ACL data file, ")
+                bytewritten, error := desfiretag.WriteData(acl_file_id, 0, nullaclbytes)
+                if error != nil {
+                    fmt.Println(fmt.Sprintf("failed (%s), skipping", error))
+                    continue
+                }
+                if (bytewritten < 8) {
+                    fmt.Println(fmt.Sprintf("WARNING: WriteData wrote %d bytes, 8 expected", bytewritten))
+                }
+                fmt.Println("Done")
+            }
+            if revoked_found {
+                _ = desfiretag.Disconnect()
+                // Reset the error counter and increase tag index
+                errcnt = 0
+                i++
+                continue
+            }
     /*
 
 
