@@ -72,7 +72,7 @@ func main() {
         panic(fmt.Sprintf("binary.Uvarint returned %d", n))
     }
     aid := freefare.NewDESFireAid(uint32(aidint))
-    fmt.Println(aid)
+    //fmt.Println(aid)
     // Needed for diversification
     sysid, err := hex.DecodeString(appmap["hacklab_acl"].(map[interface{}]interface{})["sysid"].(string))
     if err != nil {
@@ -106,14 +106,14 @@ func main() {
     if err != nil {
         panic(err)
     }
-    fmt.Println(new_master_key)
+    //fmt.Println(new_master_key)
 
     // The static app key to read UID
     uid_read_key, err := string_to_aeskey(keymap["uid_read_key"].(string))
     if err != nil {
         panic(err)
     }
-    fmt.Println(uid_read_key)
+    //fmt.Println(uid_read_key)
 
     // Bases for the diversified keys    
     prov_key_base, err := hex.DecodeString(keymap["prov_master"].(string))
@@ -144,33 +144,33 @@ func main() {
     // Initialize each tag with our app
     for i := 0; i < len(tags); i++ {
         tag := tags[i]
-		fmt.Println(tag.String(), tag.UID())
+        fmt.Println(tag.String(), tag.UID())
 
         // Skip non desfire tags
-		if (tag.Type() != freefare.DESFire) {
+        if (tag.Type() != freefare.DESFire) {
             fmt.Println("Skipped");
-			continue
-		}
-		
-		desfiretag := tag.(freefare.DESFireTag)
+            continue
+        }
+        
+        desfiretag := tag.(freefare.DESFireTag)
 
         // Connect to this tag
         fmt.Println("Connecting");
-		error := desfiretag.Connect()
-		if error != nil {
-			panic(error)
-		}
+        error := desfiretag.Connect()
+        if error != nil {
+            panic(error)
+        }
         fmt.Println("Done");
 
         fmt.Println("Authenticating");
-		error = desfiretag.Authenticate(0,*defaultkey)
-		if error != nil {
-		    fmt.Println("Failed, trying agin with new key")
-    		error = desfiretag.Authenticate(0,*new_master_key)
-    		if error != nil {
+        error = desfiretag.Authenticate(0,*defaultkey)
+        if error != nil {
+            fmt.Println("Failed, trying agin with new key")
+            error = desfiretag.Authenticate(0,*new_master_key)
+            if error != nil {
                 panic(error)
             }
-		}
+        }
         fmt.Println("Done");
 
         // Get card real UID        
@@ -203,65 +203,79 @@ func main() {
 
         fmt.Println("Changing default key");
         error = desfiretag.ChangeKey(0, *new_master_key, *defaultkey);
-		if error != nil {
-			panic(error)
-		}
+        if error != nil {
+            panic(error)
+        }
         fmt.Println("Done");
 
 
         fmt.Println("Creating application");
-        // TODO:Figure out what the settings byte (now hardcoded to 0xFF as it was in libfreefare exampkle code) actually does
+        // TODO:Figure out what the settings byte (now hardcoded to 0xFF as it was in libfreefare example code) actually does
         error = desfiretag.CreateApplication(aid, 0xFF, 6 | freefare.CryptoAES);
-		if error != nil {
-			panic(error)
-		}
+        if error != nil {
+            panic(error)
+        }
         fmt.Println("Done");
 
 
         fmt.Println("Selecting application");
         // TODO:Figure out what the settings byte (now hardcoded to 0xFF as it was in libfreefare exampkle code) actually does
         error = desfiretag.SelectApplication(aid);
-		if error != nil {
-			panic(error)
-		}
+        if error != nil {
+            panic(error)
+        }
         fmt.Println("Done");
 
         fmt.Println("Changing static UID reading key");
         error = desfiretag.ChangeKey(uid_read_key_id, *uid_read_key, *defaultkey);
-		if error != nil {
-			panic(error)
-		}
+        if error != nil {
+            panic(error)
+        }
         fmt.Println("Done");
 
 
         fmt.Println("Changing ACL reading key");
         error = desfiretag.ChangeKey(acl_read_key_id, *acl_read_key, *defaultkey);
-		if error != nil {
-			panic(error)
-		}
+        if error != nil {
+            panic(error)
+        }
         fmt.Println("Done");
 
         fmt.Println("Changing ACL writing key");
         error = desfiretag.ChangeKey(acl_write_key_id, *acl_write_key, *defaultkey);
-		if error != nil {
-			panic(error)
-		}
+        if error != nil {
+            panic(error)
+        }
         fmt.Println("Done");
 
         fmt.Println("Changing provisioning key");
         error = desfiretag.ChangeKey(prov_key_id, *prov_key, *defaultkey);
-		if error != nil {
-			panic(error)
-		}
+        if error != nil {
+            panic(error)
+        }
+        fmt.Println("Done");
+
+        fmt.Println("Creating ACL data file");
+        error = desfiretag.CreateDataFile(0, freefare.Enciphered, freefare.MakeDESFireAccessRights(acl_read_key_id, acl_write_key_id, acl_write_key_id, prov_key_id), 8, false)
+        if error != nil {
+            panic(error)
+        }
+        fmt.Println("Done");
+
+        // Not sure if this is actually needed
+        fmt.Println("Committing");
+        error = desfiretag.CommitTransaction()
+        if error != nil {
+            panic(error)
+        }
         fmt.Println("Done");
 
 
-
         fmt.Println("Disconnecting");
-		error = desfiretag.Disconnect()
-		if error != nil {
-			panic(error)
-		}
+        error = desfiretag.Disconnect()
+        if error != nil {
+            panic(error)
+        }
         fmt.Println("Done");
     }
 
