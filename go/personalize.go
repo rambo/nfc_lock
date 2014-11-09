@@ -217,7 +217,7 @@ func main() {
         acl_write_key := bytes_to_aeskey(acl_write_bytes)
 
 
-        fmt.Println("Changing default key");
+        fmt.Println("Changing default master key");
         error = desfiretag.ChangeKey(0, *new_master_key, *defaultkey);
         if error != nil {
             panic(error)
@@ -250,7 +250,23 @@ func main() {
         }
         fmt.Println("Done");
 
-        // Should we re-auth here ??
+        /**
+         * Does not work
+        fmt.Println("Re-auth with new master key")
+        error = desfiretag.Authenticate(0,*new_master_key)
+        if error != nil {
+            panic(error)
+        }
+         */
+
+        /**
+         * Also does not work
+        fmt.Println("Re-auth with default key")
+        error = desfiretag.Authenticate(0,*defaultkey)
+        if error != nil {
+            panic(error)
+        }
+         */
 
         fmt.Println("Changing provisioning key");
         error = desfiretag.ChangeKey(prov_key_id, *prov_key, *defaultkey);
@@ -289,7 +305,7 @@ func main() {
 
 
         fmt.Println("Creating ACL data file");
-        error = desfiretag.CreateDataFile(0, freefare.Enciphered, freefare.MakeDESFireAccessRights(acl_read_key_id, acl_write_key_id, acl_write_key_id, prov_key_id), 8, false)
+        error = desfiretag.CreateDataFile(0, freefare.Enciphered, freefare.MakeDESFireAccessRights(acl_read_key_id, acl_write_key_id, prov_key_id, prov_key_id), 8, false)
         if error != nil {
             panic(error)
         }
