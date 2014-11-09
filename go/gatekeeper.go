@@ -4,6 +4,7 @@ import (
     "fmt"
 	"os"
 	"os/signal"
+//    "strconv"
     "encoding/hex"
     "encoding/binary"
     "github.com/fuzxxl/nfc/2.0/nfc"    
@@ -149,6 +150,7 @@ func main() {
 		}
 	}()
 
+    fmt.Println("Starting mainloop")
     // mainloop
     for {
         // Poll for tags
@@ -171,6 +173,7 @@ func main() {
          * I'm doing this in a funky way since I may need to restart discussion with a tag due to RF-errors
          for i := 0; i < len(tags); i++ {
          */
+        TagLoop:
         for {
             if i >= len(tags) {
                 break
@@ -320,7 +323,7 @@ func main() {
                 revoked_found = true
                 var rowid int64
                 s.Scan(&rowid, row)     // Assigns 1st column to rowid, the rest to row
-                fmt.Print(fmt.Sprintf("WARNING: Found REVOKED key %s on row %d, ", realuid_str, rowid))
+                fmt.Println(fmt.Sprintf("WARNING: Found REVOKED key %s on row %d", realuid_str, rowid))
 
                 // TODO: Publish a ZMQ message or something
 
@@ -352,28 +355,82 @@ func main() {
                 i++
                 continue
             }
-    /*
 
-
-            
-            uidstr := tag.UID()
-            fmt.Println("Found tag", uidstr);
-            sql := "SELECT rowid, * FROM keys where uid=?"
-            for s, err := c.Query(sql, uidstr); err == nil; err = s.Next() {
+            // Check for known key
+            sql = "SELECT rowid, * FROM keys where uid=?"
+            for s, err := c.Query(sql, realuid_str); err == nil; err = s.Next() {
                 var rowid int64
                 s.Scan(&rowid, row)     // Assigns 1st column to rowid, the rest to row
-                db_acl := row["acl"].(int64)
+                /**
+                 * Graah panic: interface conversion: interface is int64, not uint64
+                 * TODO: Figure out how to get uints from SQLite
+                db_acl := row["acl"].(uint64)
+                 */
+                /**
+                 * We do not get is as string either
+                db_acl, _ := strconv.ParseUint(row["acl"].(string), 10, 64)
+                 */
+                db_acl := uint64(row["acl"].(int64))
+                // Check for ACL update
+                if (acl != db_acl) {
+                    fmt.Println(fmt.Sprintf("NOTICE: card ACL (%x) does not match DB (%x), ", acl, db_acl))
+
+                    fmt.Print("Re-auth with ACL write key, ")
+                    error = desfiretag.Authenticate(acl_write_key_id,*acl_write_key)
+                    if error != nil {
+                        // TODO: Retry only on RF-errors
+                        errcnt++
+                        if errcnt < 3 {
+                            fmt.Println(fmt.Sprintf("failed (%s), retrying", error))
+                            continue TagLoop
+                        }
+                        fmt.Println(fmt.Sprintf("failed (%s), retry-count exceeded, skipping tag", error))
+                        i++
+                        errcnt = 0
+                        continue TagLoop
+                    }
+                    fmt.Println("Done")
+    
+                    // Update the ACL file on card
+                    newaclbytes := make([]byte, 8)
+                    n := binary.PutUvarint(newaclbytes, db_acl)
+                    if (n < 0) {
+                        fmt.Println(fmt.Sprintf("binary.PutUvarint returned %d, skipping tag", n))
+                        i++
+                        errcnt = 0
+                        continue TagLoop
+                    }
+                    fmt.Print("Overwriting ACL data file, ")
+                    bytewritten, error := desfiretag.WriteData(acl_file_id, 0, newaclbytes)
+                    if error != nil {
+                        fmt.Println(fmt.Sprintf("failed (%s), skipping tag", error))
+                        i++
+                        errcnt = 0
+                        continue TagLoop
+                    }
+                    if (bytewritten < 8) {
+                        fmt.Println(fmt.Sprintf("WARNING: WriteData wrote %d bytes, 8 expected", bytewritten))
+                    }
+                    fmt.Println("Done")
+                }
+                // Now check the ACL match
                 if (db_acl & required_acl) == 0 {
-                    fmt.Println("Found card ", uidstr , " but ACL not granted")
+                    fmt.Println(fmt.Sprintf("NOTICE: Found valid key %s on row %d, but ACL (%x) not granted", realuid_str, rowid, required_acl))
+                    // TODO: Publish a ZMQ message or something
                     continue
                 }
+                // Match found
                 valid_found = true
-                fmt.Println("Access GRANTED to ", uidstr)
+                fmt.Println(fmt.Sprintf("SUCCESS: Access granted to %s with ACL (%x)", realuid_str, db_acl))
                 go pulse_gpio(green_led, gpiomap["green_led"].(map[interface{}]interface{})["time"].(int))
                 go pulse_gpio(relay, gpiomap["relay"].(map[interface{}]interface{})["time"].(int))
-            }
-    */
 
+                // TODO: Publish a ZMQ message or something
+                
+            }
+            // PONDER: What to do with non-revoked keys that we do not know about (but since we got this far they have our application on them...
+
+            // Cleanup
             _ = desfiretag.Disconnect()
             
             // Reset the error counter and increase tag index
