@@ -39,6 +39,24 @@ func string_to_byte(source string) (byte, error) {
     return bytearray[0], nil
 }
 
+func applicationsettings(accesskey byte, frozen, req_auth_fileops, req_auth_dir, allow_master_key_chg bool) byte {
+    ret := byte(0)
+    ret |= accesskey << 4
+    if (frozen) {
+        ret |= 1 << 3
+    }
+    if (req_auth_fileops) {
+        ret |= 1 << 2
+    }
+    if (req_auth_dir) {
+        ret |= 1 << 1;
+    }
+    if (allow_master_key_chg) {
+        ret |= 1;
+    }
+    return ret
+}
+
 func main() {
     keys_data, err := ioutil.ReadFile("keys.yaml")
     if err != nil {
@@ -244,7 +262,7 @@ func main() {
 
         fmt.Println("Creating application");
         // TODO:Figure out what the settings byte (now hardcoded to 0xFF as it was in libfreefare example code) actually does
-        error = desfiretag.CreateApplication(aid, 0xFF, 6 | freefare.CryptoAES);
+        error = desfiretag.CreateApplication(aid, applicationsettings(0xE, false, true, true, true), freefare.CryptoAES | 6);
         if error != nil {
             panic(error)
         }
@@ -252,7 +270,6 @@ func main() {
 
 
         fmt.Println("Selecting application");
-        // TODO:Figure out what the settings byte (now hardcoded to 0xFF as it was in libfreefare exampkle code) actually does
         error = desfiretag.SelectApplication(aid);
         if error != nil {
             panic(error)
@@ -282,6 +299,7 @@ func main() {
         if error != nil {
             panic(error)
         }
+
         fmt.Println("Changing provisioning key");
         error = desfiretag.ChangeKey(prov_key_id, *prov_key, *defaultkey_aes);
         if error != nil {
@@ -289,17 +307,14 @@ func main() {
         }
         fmt.Println("Done");
 
-        fmt.Println("Re-auth with null AES key")
-        error = desfiretag.Authenticate(uid_read_key_id,*defaultkey_aes)
+        /**
+         * Not needed ATM
+        fmt.Println("Re-auth with provisioning key")
+        error = desfiretag.Authenticate(prov_key_id,*prov_key)
         if error != nil {
             panic(error)
         }
-        fmt.Println("Changing static UID reading key");
-        error = desfiretag.ChangeKey(uid_read_key_id, *uid_read_key, *defaultkey_aes);
-        if error != nil {
-            panic(error)
-        }
-        fmt.Println("Done");
+         */
 
         fmt.Println("Re-auth with null AES key")
         error = desfiretag.Authenticate(acl_read_key_id,*defaultkey_aes)
@@ -313,11 +328,7 @@ func main() {
         }
         fmt.Println("Done");
 
-        fmt.Println("Re-auth with null AES key")
-        error = desfiretag.Authenticate(acl_write_key_id,*defaultkey_aes)
-        if error != nil {
-            panic(error)
-        }
+
         fmt.Println("Changing ACL writing key");
         error = desfiretag.ChangeKey(acl_write_key_id, *acl_write_key, *defaultkey_aes);
         if error != nil {
@@ -325,12 +336,14 @@ func main() {
         }
         fmt.Println("Done");
 
-
-        fmt.Println("Re-auth with provisioning key")
-        error = desfiretag.Authenticate(prov_key_id,*prov_key)
+        fmt.Println("Changing static UID reading key");
+        error = desfiretag.ChangeKey(uid_read_key_id, *uid_read_key, *defaultkey_aes);
         if error != nil {
             panic(error)
         }
+        fmt.Println("Done");
+
+
 
         fmt.Println("Creating ACL data file");
         error = desfiretag.CreateDataFile(0, freefare.Enciphered, freefare.MakeDESFireAccessRights(acl_read_key_id, acl_write_key_id, prov_key_id, prov_key_id), 8, false)
