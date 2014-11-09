@@ -140,8 +140,14 @@ func main() {
         if error != nil {
             panic(error)
         }
-        fmt.Printf("%d bytes read\n", bytesread)
-        fmt.Println("aclbytes:", aclbytes);
+        if (bytesread < 8) {
+            panic(fmt.Sprintf("ReadData read %d bytes, 8 expected", bytesread))
+        }
+        acl, n := binary.Uvarint(aclbytes)
+        if n <= 0 {
+            panic(fmt.Sprintf("binary.Uvarint returned %d", n))
+        }
+        fmt.Println("acl:", acl)
 
 
         fmt.Println("Disconnecting");
