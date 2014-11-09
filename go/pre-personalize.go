@@ -312,6 +312,16 @@ func main() {
         fmt.Println("Done");
 
         /**
+         * TODO: check later if this works
+        fmt.Println("Creating ACL backup file");
+        error = desfiretag.CreateDataFile(0, freefare.Enciphered, freefare.MakeDESFireAccessRights(acl_read_key_id, acl_write_key_id, prov_key_id, prov_key_id), 8, true)
+        if error != nil {
+            panic(error)
+        }
+        fmt.Println("Done");
+         */
+
+        /**
          * Only needed when working with backup files
         // Not sure if this is actually needed
         fmt.Println("Committing");
