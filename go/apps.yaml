@@ -1,7 +1,7 @@
 hacklab_acl: # all values are hex-encoded, wrap them in quotes to make sure they are interpreted as strings
     aid: "031337" # This must be unique
     sysid: "715517" # "System ID" used in key diversification, this can be just about anything as long as it's not too long
-    provisioning_key_id: "01"
-    uid_read_key_id: "02"
-    acl_read_key_id: "03"
-    acl_write_key_id: "04"
+    provisioning_key_id: "00"
+    uid_read_key_id: "01"
+    acl_read_key_id: "02"
+    acl_write_key_id: "03"

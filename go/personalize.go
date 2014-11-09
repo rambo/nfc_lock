@@ -250,8 +250,21 @@ func main() {
         }
         fmt.Println("Done");
 
-
         // Should we re-auth here ??
+
+        fmt.Println("Changing provisioning key");
+        error = desfiretag.ChangeKey(prov_key_id, *prov_key, *defaultkey);
+        if error != nil {
+            panic(error)
+        }
+        fmt.Println("Done");
+
+        fmt.Println("Re-auth with new provisioning key")
+        error = desfiretag.Authenticate(prov_key_id,*prov_key)
+        if error != nil {
+            panic(error)
+        }
+
 
         fmt.Println("Changing static UID reading key");
         error = desfiretag.ChangeKey(uid_read_key_id, *uid_read_key, *defaultkey);
@@ -259,7 +272,6 @@ func main() {
             panic(error)
         }
         fmt.Println("Done");
-
 
         fmt.Println("Changing ACL reading key");
         error = desfiretag.ChangeKey(acl_read_key_id, *acl_read_key, *defaultkey);
@@ -275,12 +287,6 @@ func main() {
         }
         fmt.Println("Done");
 
-        fmt.Println("Changing provisioning key");
-        error = desfiretag.ChangeKey(prov_key_id, *prov_key, *defaultkey);
-        if error != nil {
-            panic(error)
-        }
-        fmt.Println("Done");
 
         fmt.Println("Creating ACL data file");
         error = desfiretag.CreateDataFile(0, freefare.Enciphered, freefare.MakeDESFireAccessRights(acl_read_key_id, acl_write_key_id, acl_write_key_id, prov_key_id), 8, false)
