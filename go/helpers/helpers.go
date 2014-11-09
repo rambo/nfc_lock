@@ -1,12 +1,9 @@
 package helpers
 
 import (
-    "fmt"
-    "errors"
     "io/ioutil"
     "encoding/hex"
-    "encoding/binary"
-//    "strconv"
+    "strconv"
     "gopkg.in/yaml.v2"
     "github.com/fuzxxl/freefare/0.3/freefare"
 )
@@ -33,18 +30,11 @@ func Bytes2aeskey(source []byte) (*freefare.DESFireKey) {
 
 func String2aid(hexdata string) (freefare.DESFireAid, error) {
     nullaid := freefare.NewDESFireAid(uint32(0))
-    aidbytes, err := hex.DecodeString(hexdata)
-    fmt.Println("String2aid, aidbytes", aidbytes)
-    if err != nil {
-        return nullaid, err
-    }
-    aidint, n := binary.Uvarint(aidbytes)
-    fmt.Println("String2aid, aidint", aidint)
-    if n <= 0 {
-        return nullaid, errors.New(fmt.Sprintf("binary.Uvarint returned %d", n))
+    aidint, error := strconv.ParseUint(hexdata, 16, 32)
+    if (error != nil) {
+         return nullaid, error
     }
     aid := freefare.NewDESFireAid(uint32(aidint))
-    fmt.Println("String2aid, aid", aid, aid.Aid())
     return aid, nil
 }
 
