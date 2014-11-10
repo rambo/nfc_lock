@@ -194,8 +194,16 @@ func main() {
             fmt.Print(fmt.Sprintf("Connecting to %s, ", tag.UID()))
             error := desfiretag.Connect()
             if error != nil {
-                fmt.Println("failed, skipping tag");
+                // TODO: Retry only on RF-errors
+                _ = desfiretag.Disconnect()
+                errcnt++
+                if errcnt < 3 {
+                    fmt.Println(fmt.Sprintf("failed (%s), retrying", error))
+                    continue
+                }
+                fmt.Println(fmt.Sprintf("failed (%s), retry-count exceeded, skipping tag", error))
                 i++
+                errcnt = 0
                 continue
             }
             fmt.Println("done")
