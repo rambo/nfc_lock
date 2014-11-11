@@ -230,7 +230,7 @@ RETRY:
     if err != nil {
         // TODO: Retry only on RF-errors
         errcnt++
-        if errcnt < errlimit {
+        if errcnt > errlimit {
             fmt.Println(fmt.Sprintf("failed (%s), retrying", err))
         }
         fmt.Println(fmt.Sprintf("failed (%s), retry-count exceeded, skipping tag", err))
