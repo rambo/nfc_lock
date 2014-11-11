@@ -445,8 +445,6 @@ func main() {
                 // Match found
                 valid_found = true
                 fmt.Println(fmt.Sprintf("SUCCESS: Access granted to %s with ACL (%x)", realuid_str, db_acl))
-                go pulse_gpio(green_led, gpiomap["green_led"].(map[interface{}]interface{})["time"].(int))
-                go pulse_gpio(relay, gpiomap["relay"].(map[interface{}]interface{})["time"].(int))
 
                 // TODO: Publish a ZMQ message or something
                 
@@ -463,6 +461,9 @@ func main() {
         if !valid_found {
             fmt.Println("Access DENIED")
             go pulse_gpio(red_led, gpiomap["red_led"].(map[interface{}]interface{})["time"].(int))
+        } else {
+            go pulse_gpio(green_led, gpiomap["green_led"].(map[interface{}]interface{})["time"].(int))
+            go pulse_gpio(relay, gpiomap["relay"].(map[interface{}]interface{})["time"].(int))
         }
         // Run GC at this time
         runtime.GC()
