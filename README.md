@@ -69,5 +69,5 @@ Prepare some tags and insert their (real) UIDs to the grants and revokes
 
 In reality you will generate this file based on your person registry (keep track of validity times etc there, then regenerate the keydb for the door).
 
-NOTE: While we use **unsigned** 64bit integers for ACL flags SQLite integers are always signed (also Gos sqlite library seems to want to cast SQLite integers to signed 16bit integers so in reality this implementation can handle 15 differnet flags).
+NOTE: While we use **unsigned** 64bit integers for ACL flags SQLite integers are always signed.
 
