@@ -205,6 +205,19 @@ func read_and_parse_acl_file(desfiretag *freefare.DESFireTag) (uint64, error) {
     return acl, nil
 }
 
+func get_db_acl(desfiretag *freefare.DESFireTag, c *sqlite3.Conn, realuid_str string) (uint64, error) {
+    sql := "SELECT rowid, * FROM keys where uid=?"
+    for s, err := c.Query(sql, realuid_str); err == nil; err = s.Next() {
+        var rowid int64
+        row := make(sqlite3.RowMap)
+        s.Scan(&rowid, row)     // Assigns 1st column to rowid, the rest to row
+        return uint64(row["acl"].(int64)), nil
+    }
+    return 0, errors.New(fmt.Sprintf("UID not found"))
+}
+
+
+
 func main() {
     // TODO: configure this somewhere
     required_acl := uint64(1)
@@ -419,70 +432,63 @@ func main() {
                 continue
             }
             //fmt.Println("DEBUG: acl:", acl)
+            
+            // Get (possibly updated) ACL from DB, if returns error then UID is not known
+            db_acl, err := get_db_acl(&desfiretag, c, realuid_str)
+            if err != nil {
+                // No match
+                fmt.Println(fmt.Sprintf("WARNING: key %s, not found in DB", realuid_str))
+                // TODO: Should we null the ACL file just in case, because any key that is personalized but not either valid or revoked is in a weird limbo
+                // Cleanup
+                _ = desfiretag.Disconnect()
+                // Reset the err counter and increase tag index
+                errcnt = 0
+                i++
+                continue
+            }
 
-            // Check for known key
-            sql := "SELECT rowid, * FROM keys where uid=?"
-            for s, err := c.Query(sql, realuid_str); err == nil; err = s.Next() {
-                var rowid int64
-                row := make(sqlite3.RowMap)
-                s.Scan(&rowid, row)     // Assigns 1st column to rowid, the rest to row
-                /**
-                 * Graah panic: interface conversion: interface is int64, not uint64
-                 * TODO: Figure out how to get uints from SQLite
-                db_acl := row["acl"].(uint64)
-                 */
-                /**
-                 * We do not get is as string either
-                db_acl, _ := strconv.ParseUint(row["acl"].(string), 10, 64)
-                 */
-                db_acl := uint64(row["acl"].(int64))
-                // Check for ACL update
-                if (acl != db_acl) {
-                    fmt.Println(fmt.Sprintf("NOTICE: card ACL (%x) does not match DB (%x), ", acl, db_acl))
+            // Check for ACL update
+            if (acl != db_acl) {
+                fmt.Println(fmt.Sprintf("NOTICE: card ACL (%x) does not match DB (%x), ", acl, db_acl))
 
-                    // Update the ACL file on card
-                    newaclbytes := make([]byte, 8)
-                    n := binary.PutUvarint(newaclbytes, db_acl)
-                    if (n < 0) {
-                        fmt.Println(fmt.Sprintf("binary.PutUvarint returned %d, skipping tag", n))
-                        _ = desfiretag.Disconnect()
-                        i++
-                        errcnt = 0
+                // Update the ACL file on card
+                newaclbytes := make([]byte, 8)
+                n := binary.PutUvarint(newaclbytes, db_acl)
+                if (n < 0) {
+                    fmt.Println(fmt.Sprintf("binary.PutUvarint returned %d, skipping tag", n))
+                    _ = desfiretag.Disconnect()
+                    i++
+                    errcnt = 0
+                    continue TagLoop
+                }
+                err := update_acl_file(&desfiretag, &newaclbytes)
+                if err != nil {
+                    // TODO: Retry only on RF-errors
+                    _ = desfiretag.Disconnect()
+                    errcnt++
+                    if errcnt < 3 {
+                        fmt.Println(fmt.Sprintf("failed (%s), retrying", err))
                         continue TagLoop
                     }
-                    err := update_acl_file(&desfiretag, &newaclbytes)
-                    if err != nil {
-                        // TODO: Retry only on RF-errors
-                        _ = desfiretag.Disconnect()
-                        errcnt++
-                        if errcnt < 3 {
-                            fmt.Println(fmt.Sprintf("failed (%s), retrying", err))
-                            continue TagLoop
-                        }
-                        fmt.Println(fmt.Sprintf("failed (%s), retry-count exceeded, skipping tag", err))
-                        i++
-                        errcnt = 0
-                        continue TagLoop
-                    }
+                    fmt.Println(fmt.Sprintf("failed (%s), retry-count exceeded, skipping tag", err))
+                    i++
+                    errcnt = 0
+                    continue TagLoop
                 }
-                // Now check the ACL match
-                if (db_acl & required_acl) == 0 {
-                    fmt.Println(fmt.Sprintf("NOTICE: Found valid key %s on row %d, but ACL (%x) not granted", realuid_str, rowid, required_acl))
-                    // TODO: Publish a ZMQ message or something
-                    continue
-                }
-                // Match found
+            }
+
+
+            // Now check the ACL match
+            if (db_acl & required_acl) == 0 {
+                fmt.Println(fmt.Sprintf("NOTICE: Found valid key %s, but ACL (%x) not granted", realuid_str, required_acl))
+                // TODO: Publish a ZMQ message or something
+            } else {
                 valid_found = true
                 fmt.Println(fmt.Sprintf("SUCCESS: Access granted to %s with ACL (%x)", realuid_str, db_acl))
-
-                // TODO: Publish a ZMQ message or something
-                
             }
-            // PONDER: What to do with non-revoked keys that we do not know about (but since we got this far they have our application on them...
 
             // Cleanup
             _ = desfiretag.Disconnect()
-            
             // Reset the err counter and increase tag index
             errcnt = 0
             i++
