@@ -157,6 +157,28 @@ func update_acl_file(desfiretag *freefare.DESFireTag, newdata *[]byte) error {
     return nil
 }
 
+func check_revoked(desfiretag *freefare.DESFireTag, c *sqlite3.Conn, realuid_str string) (bool, error) {
+    revoked_found := false
+    sql := "SELECT rowid, * FROM revoked where uid=?"
+    for s, err := c.Query(sql, realuid_str); err == nil; err = s.Next() {
+        revoked_found = true
+        var rowid int64
+        row := make(sqlite3.RowMap)
+        s.Scan(&rowid, row)     // Assigns 1st column to rowid, the rest to row
+        fmt.Println(fmt.Sprintf("WARNING: Found REVOKED key %s on row %d", realuid_str, rowid))
+
+        // TODO: Publish a ZMQ message or something
+
+        // Null the ACL file on card
+        nullaclbytes := make([]byte, 8)
+        err := update_acl_file(desfiretag, &nullaclbytes)
+        if err != nil {
+            return revoked_found, err
+        }
+    }
+    return revoked_found, nil
+}
+
 func main() {
     // TODO: configure this somewhere
     required_acl := uint64(1)
@@ -322,6 +344,7 @@ func main() {
                 errcnt = 0
                 continue
             }
+
             realuid, error := hex.DecodeString(realuid_str)
             if error != nil {
                 fmt.Println(fmt.Sprintf("ERROR: Failed to parse real UID (%s), skipping tag", error))
@@ -339,6 +362,20 @@ func main() {
                 _ = desfiretag.Disconnect()
                 i++
                 errcnt = 0
+                continue
+            }
+
+            // Check for revoked key
+            revoked_found, err := check_revoked(&desfiretag, c, realuid_str)
+            if err != nil {
+                fmt.Println(fmt.Sprintf("revoked_check_revoked returned error (%s)", err))
+                revoked_found = true
+            }
+            if revoked_found {
+                _ = desfiretag.Disconnect()
+                // Reset the error counter and increase tag index
+                errcnt = 0
+                i++
                 continue
             }
 
@@ -389,35 +426,8 @@ func main() {
             fmt.Println("Done")
             //fmt.Println("DEBUG: acl:", acl)
 
-            // Check for revoked key
-            revoked_found := false
-            sql := "SELECT rowid, * FROM revoked where uid=?"
-            for s, err := c.Query(sql, realuid_str); err == nil; err = s.Next() {
-                revoked_found = true
-                var rowid int64
-                row := make(sqlite3.RowMap)
-                s.Scan(&rowid, row)     // Assigns 1st column to rowid, the rest to row
-                fmt.Println(fmt.Sprintf("WARNING: Found REVOKED key %s on row %d", realuid_str, rowid))
-
-                // TODO: Publish a ZMQ message or something
-
-                nullaclbytes := make([]byte, 8)
-                err := update_acl_file(&desfiretag, &nullaclbytes)
-                if err != nil {
-                    fmt.Println(fmt.Sprintf("failed (%s), skipping", err))
-                    continue
-                }
-            }
-            if revoked_found {
-                _ = desfiretag.Disconnect()
-                // Reset the error counter and increase tag index
-                errcnt = 0
-                i++
-                continue
-            }
-
             // Check for known key
-            sql = "SELECT rowid, * FROM keys where uid=?"
+            sql := "SELECT rowid, * FROM keys where uid=?"
             for s, err := c.Query(sql, realuid_str); err == nil; err = s.Next() {
                 var rowid int64
                 row := make(sqlite3.RowMap)
