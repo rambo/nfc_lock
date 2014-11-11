@@ -137,6 +137,26 @@ func recalculate_diversified_keys(realuid []byte) error {
     return nil
 }
 
+func update_acl_file(desfiretag *freefare.DESFireTag, newdata *[]byte) error {
+    fmt.Print("Re-auth with ACL write key, ")
+    err := desfiretag.Authenticate(keychain.acl_write_key_id,*keychain.acl_write_key)
+    if err != nil {
+        return err
+    }
+    fmt.Println("Done")
+
+    fmt.Print("Overwriting ACL data file, ")
+    byteswritten, err := desfiretag.WriteData(appinfo.acl_file_id, 0, *newdata)
+    if err != nil {
+        return err
+    }
+    if (byteswritten < 8) {
+        fmt.Println(fmt.Sprintf("WARNING: WriteData wrote %d bytes, 8 expected", byteswritten))
+    }
+    fmt.Println("Done")
+    return nil
+}
+
 func main() {
     // TODO: configure this somewhere
     required_acl := uint64(1)
@@ -381,26 +401,12 @@ func main() {
 
                 // TODO: Publish a ZMQ message or something
 
-                fmt.Print("Re-auth with ACL write key, ")
-                error = desfiretag.Authenticate(keychain.acl_write_key_id,*keychain.acl_write_key)
-                if error != nil {
-                    fmt.Println(fmt.Sprintf("failed (%s), skipping", error))
-                    continue
-                }
-                fmt.Println("Done")
-
-                // Null the ACL file on card
                 nullaclbytes := make([]byte, 8)
-                fmt.Print("Overwriting ACL data file, ")
-                bytewritten, error := desfiretag.WriteData(appinfo.acl_file_id, 0, nullaclbytes)
-                if error != nil {
-                    fmt.Println(fmt.Sprintf("failed (%s), skipping", error))
+                err := update_acl_file(&desfiretag, &nullaclbytes)
+                if err != nil {
+                    fmt.Println(fmt.Sprintf("failed (%s), skipping", err))
                     continue
                 }
-                if (bytewritten < 8) {
-                    fmt.Println(fmt.Sprintf("WARNING: WriteData wrote %d bytes, 8 expected", bytewritten))
-                }
-                fmt.Println("Done")
             }
             if revoked_found {
                 _ = desfiretag.Disconnect()
@@ -430,23 +436,6 @@ func main() {
                 if (acl != db_acl) {
                     fmt.Println(fmt.Sprintf("NOTICE: card ACL (%x) does not match DB (%x), ", acl, db_acl))
 
-                    fmt.Print("Re-auth with ACL write key, ")
-                    error = desfiretag.Authenticate(keychain.acl_write_key_id,*keychain.acl_write_key)
-                    if error != nil {
-                        // TODO: Retry only on RF-errors
-                        _ = desfiretag.Disconnect()
-                        errcnt++
-                        if errcnt < 3 {
-                            fmt.Println(fmt.Sprintf("failed (%s), retrying", error))
-                            continue TagLoop
-                        }
-                        fmt.Println(fmt.Sprintf("failed (%s), retry-count exceeded, skipping tag", error))
-                        i++
-                        errcnt = 0
-                        continue TagLoop
-                    }
-                    fmt.Println("Done")
-    
                     // Update the ACL file on card
                     newaclbytes := make([]byte, 8)
                     n := binary.PutUvarint(newaclbytes, db_acl)
@@ -457,19 +446,20 @@ func main() {
                         errcnt = 0
                         continue TagLoop
                     }
-                    fmt.Print("Overwriting ACL data file, ")
-                    bytewritten, error := desfiretag.WriteData(appinfo.acl_file_id, 0, newaclbytes)
-                    if error != nil {
-                        fmt.Println(fmt.Sprintf("failed (%s), skipping tag", error))
+                    err := update_acl_file(&desfiretag, &newaclbytes)
+                    if err != nil {
+                        // TODO: Retry only on RF-errors
                         _ = desfiretag.Disconnect()
+                        errcnt++
+                        if errcnt < 3 {
+                            fmt.Println(fmt.Sprintf("failed (%s), retrying", err))
+                            continue TagLoop
+                        }
+                        fmt.Println(fmt.Sprintf("failed (%s), retry-count exceeded, skipping tag", err))
                         i++
                         errcnt = 0
                         continue TagLoop
                     }
-                    if (bytewritten < 8) {
-                        fmt.Println(fmt.Sprintf("WARNING: WriteData wrote %d bytes, 8 expected", bytewritten))
-                    }
-                    fmt.Println("Done")
                 }
                 // Now check the ACL match
                 if (db_acl & required_acl) == 0 {
