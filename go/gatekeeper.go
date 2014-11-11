@@ -35,13 +35,33 @@ func clear_and_close(pin gpio.Pin) {
     pin.Close()
 }
 
+// Use structs to pass data around so I can refactor 
+type AppInfo struct {
+    aid freefare.DESFireAid
+    aidbytes []byte
+    sysid []byte
+    acl_read_base []byte
+    acl_write_base []byte
+    acl_file_id byte
+}
+
+type KeyChain struct {
+    uid_read_key_id byte
+    acl_read_key_id byte
+    acl_write_key_id byte
+
+    uid_read_key *freefare.DESFireKey
+    acl_read_key *freefare.DESFireKey
+    acl_write_key *freefare.DESFireKey
+}
+
+var (
+    keychain = KeyChain{}
+    appinfo = AppInfo{}
+)
 
 
-func main() {
-    // TODO: configure this somewhere
-    required_acl := uint64(1)
-
-
+func init_appinfo() {
     keymap, err := helpers.LoadYAMLFile("keys.yaml")
     if err != nil {
         panic(err)
@@ -52,6 +72,77 @@ func main() {
         panic(err)
     }
 
+    // Application-id
+    appinfo.aid, err = helpers.String2aid(appmap["hacklab_acl"].(map[interface{}]interface{})["aid"].(string))
+    if err != nil {
+        panic(err)
+    }
+
+    // Needed for diversification
+    appinfo.aidbytes = helpers.Aid2bytes(appinfo.aid)
+    appinfo.sysid, err = hex.DecodeString(appmap["hacklab_acl"].(map[interface{}]interface{})["sysid"].(string))
+    if err != nil {
+        panic(err)
+    }
+
+    appinfo.acl_file_id, err = helpers.String2byte(appmap["hacklab_acl"].(map[interface{}]interface{})["acl_file_id"].(string))
+    if err != nil {
+        panic(err)
+    }
+
+
+    // Key id numbers from config
+    keychain.uid_read_key_id, err = helpers.String2byte(appmap["hacklab_acl"].(map[interface{}]interface{})["uid_read_key_id"].(string))
+    if err != nil {
+        panic(err)
+    }
+    keychain.acl_read_key_id, err = helpers.String2byte(appmap["hacklab_acl"].(map[interface{}]interface{})["acl_read_key_id"].(string))
+    if err != nil {
+        panic(err)
+    }
+    keychain.acl_write_key_id, err = helpers.String2byte(appmap["hacklab_acl"].(map[interface{}]interface{})["acl_write_key_id"].(string))
+    if err != nil {
+        panic(err)
+    }
+
+    // The static app key to read UID
+    keychain.uid_read_key, err = helpers.String2aeskey(keymap["uid_read_key"].(string))
+    if err != nil {
+        panic(err)
+    }
+
+    // Bases for the diversified keys    
+    appinfo.acl_read_base, err = hex.DecodeString(keymap["acl_read_key"].(string))
+    if err != nil {
+        panic(err)
+    }
+    appinfo.acl_write_base, err = hex.DecodeString(keymap["acl_write_key"].(string))
+    if err != nil {
+        panic(err)
+    }
+
+}
+
+func recalculate_diversified_keys(realuid []byte) error {
+    acl_read_bytes, err := keydiversification.AES128(appinfo.acl_read_base[:], appinfo.aidbytes[:], realuid[:], appinfo.sysid[:])
+    if err != nil {
+        return err
+    }
+    acl_write_bytes, err := keydiversification.AES128(appinfo.acl_write_base[:], appinfo.aidbytes[:], realuid[:], appinfo.sysid[:])
+    if err != nil {
+        return err
+    }
+    keychain.acl_read_key = helpers.Bytes2aeskey(acl_read_bytes)
+    keychain.acl_write_key = helpers.Bytes2aeskey(acl_write_bytes)
+    return nil
+}
+
+func main() {
+    // TODO: configure this somewhere
+    required_acl := uint64(1)
+
+    init_appinfo()
+
     gpiomap, err := helpers.LoadYAMLFile("gpio.yaml")
     if err != nil {
         panic(err)
@@ -61,53 +152,6 @@ func main() {
     c, err := sqlite3.Open("keys.db")
     if err != nil {
         panic(err);
-    }
-
-    // Application-id
-    aid, err := helpers.String2aid(appmap["hacklab_acl"].(map[interface{}]interface{})["aid"].(string))
-    if err != nil {
-        panic(err)
-    }
-
-    // Needed for diversification
-    aidbytes := helpers.Aid2bytes(aid)
-    sysid, err := hex.DecodeString(appmap["hacklab_acl"].(map[interface{}]interface{})["sysid"].(string))
-    if err != nil {
-        panic(err)
-    }
-
-    // Key id numbers from config
-    uid_read_key_id, err := helpers.String2byte(appmap["hacklab_acl"].(map[interface{}]interface{})["uid_read_key_id"].(string))
-    if err != nil {
-        panic(err)
-    }
-    acl_read_key_id, err := helpers.String2byte(appmap["hacklab_acl"].(map[interface{}]interface{})["acl_read_key_id"].(string))
-    if err != nil {
-        panic(err)
-    }
-    acl_file_id, err := helpers.String2byte(appmap["hacklab_acl"].(map[interface{}]interface{})["acl_file_id"].(string))
-    if err != nil {
-        panic(err)
-    }
-    acl_write_key_id, err := helpers.String2byte(appmap["hacklab_acl"].(map[interface{}]interface{})["acl_write_key_id"].(string))
-    if err != nil {
-        panic(err)
-    }
-
-    // The static app key to read UID
-    uid_read_key, err := helpers.String2aeskey(keymap["uid_read_key"].(string))
-    if err != nil {
-        panic(err)
-    }
-
-    // Bases for the diversified keys    
-    acl_read_base, err := hex.DecodeString(keymap["acl_read_key"].(string))
-    if err != nil {
-        panic(err)
-    }
-    acl_write_base, err := hex.DecodeString(keymap["acl_write_key"].(string))
-    if err != nil {
-        panic(err)
     }
 
 
@@ -208,6 +252,7 @@ func main() {
             }
             fmt.Println("done")
 
+            aid := appinfo.aid
             fmt.Print(fmt.Sprintf("Selecting application %d, ", aid.Aid()))
             error = desfiretag.SelectApplication(aid);
             if error != nil {
@@ -226,7 +271,7 @@ func main() {
             fmt.Println("Done")
 
             fmt.Print("Authenticating, ")
-            error = desfiretag.Authenticate(uid_read_key_id,*uid_read_key)
+            error = desfiretag.Authenticate(keychain.uid_read_key_id,*keychain.uid_read_key)
             if error != nil {
                 // TODO: Retry only on RF-errors
                 _ = desfiretag.Disconnect()
@@ -268,27 +313,17 @@ func main() {
             fmt.Println("Got real UID:", hex.EncodeToString(realuid));
 
             // Calculate the diversified keys
-            acl_read_bytes, err := keydiversification.AES128(acl_read_base[:], aidbytes[:], realuid[:], sysid[:])
-            if err != nil {
-                fmt.Println(fmt.Sprintf("ERROR: Failed to get diversified acl_read_key (%s), skipping tag", error))
+            error = recalculate_diversified_keys(realuid[:])
+            if error != nil {
+                fmt.Println(fmt.Sprintf("ERROR: Failed to get diversified ACL keys (%s), skipping tag", error))
                 _ = desfiretag.Disconnect()
                 i++
                 errcnt = 0
                 continue
             }
-            acl_read_key := helpers.Bytes2aeskey(acl_read_bytes)
-            acl_write_bytes, err := keydiversification.AES128(acl_write_base[:], aidbytes[:], realuid[:], sysid[:])
-            if err != nil {
-                fmt.Println(fmt.Sprintf("ERROR: Failed to get diversified acl_write_key (%s), skipping tag", error))
-                _ = desfiretag.Disconnect()
-                i++
-                errcnt = 0
-                continue
-            }
-            acl_write_key := helpers.Bytes2aeskey(acl_write_bytes)
-    
+
             fmt.Print("Re-auth with ACL read key, ")
-            error = desfiretag.Authenticate(acl_read_key_id,*acl_read_key)
+            error = desfiretag.Authenticate(keychain.acl_read_key_id,*keychain.acl_read_key)
             if error != nil {
                 // TODO: Retry only on RF-errors
                 _ = desfiretag.Disconnect()
@@ -306,7 +341,7 @@ func main() {
 
             aclbytes := make([]byte, 8)
             fmt.Print("Reading ACL data file, ")
-            bytesread, err := desfiretag.ReadData(acl_file_id, 0, aclbytes)
+            bytesread, error := desfiretag.ReadData(appinfo.acl_file_id, 0, aclbytes)
             if error != nil {
                 // TODO: Retry only on RF-errors
                 _ = desfiretag.Disconnect()
@@ -347,7 +382,7 @@ func main() {
                 // TODO: Publish a ZMQ message or something
 
                 fmt.Print("Re-auth with ACL write key, ")
-                error = desfiretag.Authenticate(acl_write_key_id,*acl_write_key)
+                error = desfiretag.Authenticate(keychain.acl_write_key_id,*keychain.acl_write_key)
                 if error != nil {
                     fmt.Println(fmt.Sprintf("failed (%s), skipping", error))
                     continue
@@ -357,7 +392,7 @@ func main() {
                 // Null the ACL file on card
                 nullaclbytes := make([]byte, 8)
                 fmt.Print("Overwriting ACL data file, ")
-                bytewritten, error := desfiretag.WriteData(acl_file_id, 0, nullaclbytes)
+                bytewritten, error := desfiretag.WriteData(appinfo.acl_file_id, 0, nullaclbytes)
                 if error != nil {
                     fmt.Println(fmt.Sprintf("failed (%s), skipping", error))
                     continue
@@ -396,7 +431,7 @@ func main() {
                     fmt.Println(fmt.Sprintf("NOTICE: card ACL (%x) does not match DB (%x), ", acl, db_acl))
 
                     fmt.Print("Re-auth with ACL write key, ")
-                    error = desfiretag.Authenticate(acl_write_key_id,*acl_write_key)
+                    error = desfiretag.Authenticate(keychain.acl_write_key_id,*keychain.acl_write_key)
                     if error != nil {
                         // TODO: Retry only on RF-errors
                         _ = desfiretag.Disconnect()
@@ -423,7 +458,7 @@ func main() {
                         continue TagLoop
                     }
                     fmt.Print("Overwriting ACL data file, ")
-                    bytewritten, error := desfiretag.WriteData(acl_file_id, 0, newaclbytes)
+                    bytewritten, error := desfiretag.WriteData(appinfo.acl_file_id, 0, newaclbytes)
                     if error != nil {
                         fmt.Println(fmt.Sprintf("failed (%s), skipping tag", error))
                         _ = desfiretag.Disconnect()
