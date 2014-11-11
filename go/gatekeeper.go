@@ -418,7 +418,7 @@ func main() {
                 errcnt = 0
                 continue
             }
-            fmt.Println("DEBUG: acl:", acl)
+            //fmt.Println("DEBUG: acl:", acl)
 
             // Check for known key
             sql := "SELECT rowid, * FROM keys where uid=?"

@@ -59,13 +59,15 @@ Then edit `/etc/apt/sources.list.d/xivilization-raspbian.list` and switch to htt
 
 Create a test file `sqlite3 keys.db`:
 
-    CREATE TABLE keys(uid text, acl integer);
-    CREATE TABLE revoked(uid text);
+    CREATE TABLE keys(uid TEXT UNIQUE, acl INTEGER);
+    CREATE TABLE revoked(uid TEXT UNIQUE);
 
 Prepare some tags and insert their (real) UIDs to the grants and revokes
 
     INSERT INTO revoked VALUES ("04453069b21e80");
     INSERT INTO keys VALUES ("04212f69b21e80", 1);
 
-In reality you will generate this file based on your person registry (keep track of validity times etc there, then regenerate the keydb for the door)
+In reality you will generate this file based on your person registry (keep track of validity times etc there, then regenerate the keydb for the door).
+
+NOTE: While we use **unsigned** 64bit integers for ACL flags SQLite integers are always signed (also Gos sqlite library seems to want to cast SQLite integers to signed 16bit integers so in reality this implementation can handle 15 differnet flags).
 
