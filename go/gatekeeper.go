@@ -160,12 +160,11 @@ func update_acl_file(desfiretag *freefare.DESFireTag, newdata *[]byte) error {
 
 func check_revoked(desfiretag *freefare.DESFireTag, c *sqlite3.Conn, realuid_str string) (bool, error) {
     revoked_found := false
-    sql := "SELECT rowid, * FROM revoked where uid=?"
+    sql := "SELECT rowid FROM revoked where uid=?"
     for s, err := c.Query(sql, realuid_str); err == nil; err = s.Next() {
         revoked_found = true
         var rowid int64
-        row := make(sqlite3.RowMap)
-        s.Scan(&rowid, row)     // Assigns 1st column to rowid, the rest to row
+        s.Scan(&rowid)     // Assigns 1st column to rowid, the rest to row
         fmt.Println(fmt.Sprintf("WARNING: Found REVOKED key %s on row %d", realuid_str, rowid))
 
         // TODO: Publish a ZMQ message or something
@@ -206,7 +205,7 @@ func read_and_parse_acl_file(desfiretag *freefare.DESFireTag) (uint64, error) {
 }
 
 func get_db_acl(desfiretag *freefare.DESFireTag, c *sqlite3.Conn, realuid_str string) (uint64, error) {
-    sql := "SELECT rowid, * FROM keys where uid=?"
+    sql := "SELECT rowid,acl FROM keys where uid=?"
     for s, err := c.Query(sql, realuid_str); err == nil; err = s.Next() {
         var rowid int64
         row := make(sqlite3.RowMap)
