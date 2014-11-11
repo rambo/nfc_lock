@@ -4,6 +4,7 @@ import (
     "fmt"
 	"os"
 	"os/signal"
+	"runtime"
 //    "strconv"
     "encoding/hex"
     "encoding/binary"
@@ -61,7 +62,6 @@ func main() {
     if err != nil {
         panic(err);
     }
-    row := make(sqlite3.RowMap)
 
     // Application-id
     aid, err := helpers.String2aid(appmap["hacklab_acl"].(map[interface{}]interface{})["aid"].(string))
@@ -268,7 +268,7 @@ func main() {
             fmt.Println("Got real UID:", hex.EncodeToString(realuid));
 
             // Calculate the diversified keys
-            acl_read_bytes, err := keydiversification.AES128(acl_read_base, aidbytes, realuid, sysid)
+            acl_read_bytes, err := keydiversification.AES128(acl_read_base[:], aidbytes[:], realuid[:], sysid[:])
             if err != nil {
                 fmt.Println(fmt.Sprintf("ERROR: Failed to get diversified acl_read_key (%s), skipping tag", error))
                 _ = desfiretag.Disconnect()
@@ -277,7 +277,7 @@ func main() {
                 continue
             }
             acl_read_key := helpers.Bytes2aeskey(acl_read_bytes)
-            acl_write_bytes, err := keydiversification.AES128(acl_write_base, aidbytes, realuid, sysid)
+            acl_write_bytes, err := keydiversification.AES128(acl_write_base[:], aidbytes[:], realuid[:], sysid[:])
             if err != nil {
                 fmt.Println(fmt.Sprintf("ERROR: Failed to get diversified acl_write_key (%s), skipping tag", error))
                 _ = desfiretag.Disconnect()
@@ -340,6 +340,7 @@ func main() {
             for s, err := c.Query(sql, realuid_str); err == nil; err = s.Next() {
                 revoked_found = true
                 var rowid int64
+                row := make(sqlite3.RowMap)
                 s.Scan(&rowid, row)     // Assigns 1st column to rowid, the rest to row
                 fmt.Println(fmt.Sprintf("WARNING: Found REVOKED key %s on row %d", realuid_str, rowid))
 
@@ -378,6 +379,7 @@ func main() {
             sql = "SELECT rowid, * FROM keys where uid=?"
             for s, err := c.Query(sql, realuid_str); err == nil; err = s.Next() {
                 var rowid int64
+                row := make(sqlite3.RowMap)
                 s.Scan(&rowid, row)     // Assigns 1st column to rowid, the rest to row
                 /**
                  * Graah panic: interface conversion: interface is int64, not uint64
@@ -462,6 +464,8 @@ func main() {
             fmt.Println("Access DENIED")
             go pulse_gpio(red_led, gpiomap["red_led"].(map[interface{}]interface{})["time"].(int))
         }
+        // Run GC at this time
+        runtime.GC()
         // Wait a moment before continuing with fast polling
         time.Sleep(500 * time.Millisecond)
     }
