@@ -215,7 +215,163 @@ func get_db_acl(desfiretag *freefare.DESFireTag, c *sqlite3.Conn, realuid_str st
     return 0, errors.New(fmt.Sprintf("UID not found"))
 }
 
+func check_tag(desfiretag *freefare.DESFireTag, c *sqlite3.Conn, required_acl uint64) (bool, error) {
+    const errlimit = 3
+    var err error = nil
+    var realuid_str string
+    var realuid []byte
+    acl := uint64(0)
+    db_acl := uint64(0)
+    revoked_found := false
+    errcnt := 0
+    connected := false
+    
+RETRY:
+    if connected {
+        _ = desfiretag.Disconnect()
+    }
 
+    // Connect to this tag
+    fmt.Print(fmt.Sprintf("Connecting to %s, ", desfiretag.UID()))
+    err = desfiretag.Connect()
+    if err != nil {
+        // TODO: Retry only on RF-errors
+        errcnt++
+        if errcnt < errlimit {
+            fmt.Println(fmt.Sprintf("failed (%s), retrying", err))
+            goto RETRY
+        }
+        fmt.Println(fmt.Sprintf("failed (%s), retry-count exceeded, skipping tag", err))
+        goto FAIL
+    }
+    fmt.Println("done")
+    connected = true
+
+    fmt.Print(fmt.Sprintf("Selecting application %d, ", appinfo.aid.Aid()))
+    err = desfiretag.SelectApplication(appinfo.aid);
+    if err != nil {
+        // TODO: Retry only on RF-errors
+        errcnt++
+        if errcnt < errlimit {
+            fmt.Println(fmt.Sprintf("failed (%s), retrying", err))
+            goto RETRY
+        }
+        fmt.Println(fmt.Sprintf("failed (%s), retry-count exceeded, skipping tag", err))
+        goto FAIL
+    }
+    fmt.Println("Done")
+
+    fmt.Print("Authenticating, ")
+    err = desfiretag.Authenticate(keychain.uid_read_key_id,*keychain.uid_read_key)
+    if err != nil {
+        // TODO: Retry only on RF-errors
+        errcnt++
+        if errcnt < errlimit {
+            fmt.Println(fmt.Sprintf("failed (%s), retrying", err))
+            goto RETRY
+        }
+        fmt.Println(fmt.Sprintf("failed (%s), retry-count exceeded, skipping tag", err))
+        goto FAIL
+    }
+    fmt.Println("Done")
+
+    // Get card real UID        
+    realuid_str, err = desfiretag.CardUID()
+    if err != nil {
+        // TODO: Retry only on RF-errors
+        errcnt++
+        if errcnt < errlimit {
+            fmt.Println(fmt.Sprintf("failed (%s), retrying", err))
+            goto RETRY
+        }
+        fmt.Println(fmt.Sprintf("failed (%s), retry-count exceeded, skipping tag", err))
+        goto FAIL
+    }
+    realuid, err = hex.DecodeString(realuid_str)
+    if err != nil {
+        fmt.Println(fmt.Sprintf("ERROR: Failed to parse real UID (%s), skipping tag", err))
+        goto FAIL
+    }
+    fmt.Println("Got real UID:", hex.EncodeToString(realuid));
+
+    // Calculate the diversified keys
+    err = recalculate_diversified_keys(realuid[:])
+    if err != nil {
+        fmt.Println(fmt.Sprintf("ERROR: Failed to get diversified ACL keys (%s), skipping tag", err))
+        goto FAIL
+    }
+
+    // Check for revoked key
+    revoked_found, err = check_revoked(desfiretag, c, realuid_str)
+    if err != nil {
+        fmt.Println(fmt.Sprintf("check_revoked returned err (%s)", err))
+        revoked_found = true
+    }
+    if revoked_found {
+        goto FAIL
+    }
+
+    acl, err = read_and_parse_acl_file(desfiretag)
+    if err != nil {
+        // TODO: Retry only on RF-errors
+        errcnt++
+        if errcnt < errlimit {
+            fmt.Println(fmt.Sprintf("failed (%s), retrying", err))
+            goto RETRY
+        }
+        fmt.Println(fmt.Sprintf("failed (%s), retry-count exceeded, skipping tag", err))
+        goto FAIL
+    }
+    //fmt.Println("DEBUG: acl:", acl)
+
+    // Get (possibly updated) ACL from DB, if returns error then UID is not known
+    db_acl, err = get_db_acl(desfiretag, c, realuid_str)
+    if err != nil {
+        // No match
+        fmt.Println(fmt.Sprintf("WARNING: key %s, not found in DB", realuid_str))
+        // TODO: Should we null the ACL file just in case, because any key that is personalized but not either valid or revoked is in a weird limbo
+        goto FAIL
+    }
+
+    // Check for ACL update
+    if (acl != db_acl) {
+        fmt.Println(fmt.Sprintf("NOTICE: card ACL (%x) does not match DB (%x), ", acl, db_acl))
+
+        // Update the ACL file on card
+        newaclbytes := make([]byte, 8)
+        n := binary.PutUvarint(newaclbytes, db_acl)
+        if (n < 0) {
+            fmt.Println(fmt.Sprintf("binary.PutUvarint returned %d, skipping tag", n))
+            goto FAIL
+        }
+        err := update_acl_file(desfiretag, &newaclbytes)
+        if err != nil {
+            // TODO: Retry only on RF-errors
+            errcnt++
+            if errcnt < errlimit {
+                fmt.Println(fmt.Sprintf("failed (%s), retrying", err))
+                goto RETRY
+            }
+            fmt.Println(fmt.Sprintf("failed (%s), retry-count exceeded, skipping tag", err))
+            goto FAIL
+        }
+    }
+
+    // Now check the ACL match
+    if (db_acl & required_acl) == 0 {
+        fmt.Println(fmt.Sprintf("NOTICE: Found valid key %s, but ACL (%x) not granted", realuid_str, required_acl))
+        // TODO: Publish a ZMQ message or something
+        goto FAIL
+    }    
+
+    fmt.Println(fmt.Sprintf("SUCCESS: Access granted to %s with ACL (%x)", realuid_str, db_acl))
+    return true, nil
+FAIL:
+    if connected {
+        _ = desfiretag.Disconnect()
+    }
+    return false, err
+}
 
 func main() {
     // TODO: configure this somewhere
@@ -282,215 +438,32 @@ func main() {
         for {
             tags, err = freefare.GetTags(d);
             if err != nil {
-                panic(err);
+                // TODO: Probably should not panic here
+                panic(err)
             }
             if len(tags) > 0 {
-                break;
+                break
             }
             time.Sleep(100 * time.Millisecond)
             //fmt.Println("...polling")
         }
-        valid_found := false
-        i := 0
-        errcnt := 0
-        /**
-         * I'm doing this in a funky way since I may need to restart discussion with a tag due to RF-errors
-         for i := 0; i < len(tags); i++ {
-         */
-        TagLoop:
-        for {
-            if i >= len(tags) {
-                break
-            }
-            tag := tags[i]
 
-            // Skip non desfire tags
+        valid_found := false
+        for i := 0; i < len(tags); i++ {
+            tag := tags[i]
             if (tag.Type() != freefare.DESFire) {
                 fmt.Println(fmt.Sprintf("Non-DESFire tag %s skipped", tag.UID()))
-                i++
-                errcnt = 0
                 continue
             }
-
             desfiretag := tag.(freefare.DESFireTag)
 
-            // Connect to this tag
-            fmt.Print(fmt.Sprintf("Connecting to %s, ", tag.UID()))
-            err := desfiretag.Connect()
+            tag_valid, err := check_tag(&desfiretag, c, required_acl)
             if err != nil {
-                // TODO: Retry only on RF-errors
-                _ = desfiretag.Disconnect()
-                errcnt++
-                if errcnt < 3 {
-                    fmt.Println(fmt.Sprintf("failed (%s), retrying", err))
-                    continue
-                }
-                fmt.Println(fmt.Sprintf("failed (%s), retry-count exceeded, skipping tag", err))
-                i++
-                errcnt = 0
                 continue
             }
-            fmt.Println("done")
-
-            aid := appinfo.aid
-            fmt.Print(fmt.Sprintf("Selecting application %d, ", aid.Aid()))
-            err = desfiretag.SelectApplication(aid);
-            if err != nil {
-                // TODO: Retry only on RF-errors
-                _ = desfiretag.Disconnect()
-                errcnt++
-                if errcnt < 3 {
-                    fmt.Println(fmt.Sprintf("failed (%s), retrying", err))
-                    continue
-                }
-                fmt.Println(fmt.Sprintf("failed (%s), retry-count exceeded, skipping tag", err))
-                i++
-                errcnt = 0
-                continue
-            }
-            fmt.Println("Done")
-
-            fmt.Print("Authenticating, ")
-            err = desfiretag.Authenticate(keychain.uid_read_key_id,*keychain.uid_read_key)
-            if err != nil {
-                // TODO: Retry only on RF-errors
-                _ = desfiretag.Disconnect()
-                errcnt++
-                if errcnt < 3 {
-                    fmt.Println(fmt.Sprintf("failed (%s), retrying", err))
-                    continue
-                }
-                fmt.Println(fmt.Sprintf("failed (%s), retry-count exceeded, skipping tag", err))
-                i++
-                errcnt = 0
-                continue
-            }
-            fmt.Println("Done")
-
-            // Get card real UID        
-            realuid_str, err := desfiretag.CardUID()
-            if err != nil {
-                // TODO: Retry only on RF-errors
-                _ = desfiretag.Disconnect()
-                errcnt++
-                if errcnt < 3 {
-                    fmt.Println(fmt.Sprintf("Failed to read card real UID (%s), retrying", err))
-                    continue
-                }
-                fmt.Println(fmt.Sprintf("Failed to read card real UID (%s), retry-count exceeded, skipping tag", err))
-                i++
-                errcnt = 0
-                continue
-            }
-            realuid, err := hex.DecodeString(realuid_str)
-            if err != nil {
-                fmt.Println(fmt.Sprintf("ERROR: Failed to parse real UID (%s), skipping tag", err))
-                _ = desfiretag.Disconnect()
-                i++
-                errcnt = 0
-                continue
-            }
-            fmt.Println("Got real UID:", hex.EncodeToString(realuid));
-
-            // Calculate the diversified keys
-            err = recalculate_diversified_keys(realuid[:])
-            if err != nil {
-                fmt.Println(fmt.Sprintf("ERROR: Failed to get diversified ACL keys (%s), skipping tag", err))
-                _ = desfiretag.Disconnect()
-                i++
-                errcnt = 0
-                continue
-            }
-
-            // Check for revoked key
-            revoked_found, err := check_revoked(&desfiretag, c, realuid_str)
-            if err != nil {
-                fmt.Println(fmt.Sprintf("check_revoked returned err (%s)", err))
-                revoked_found = true
-            }
-            if revoked_found {
-                _ = desfiretag.Disconnect()
-                // Reset the err counter and increase tag index
-                errcnt = 0
-                i++
-                continue
-            }
-
-            acl, err := read_and_parse_acl_file(&desfiretag)
-            if err != nil {
-                // TODO: Retry only on RF-errors
-                _ = desfiretag.Disconnect()
-                errcnt++
-                if errcnt < 3 {
-                    fmt.Println(fmt.Sprintf("failed (%s), retrying", err))
-                    continue
-                }
-                fmt.Println(fmt.Sprintf("failed (%s), retry-count exceeded, skipping tag", err))
-                i++
-                errcnt = 0
-                continue
-            }
-            //fmt.Println("DEBUG: acl:", acl)
-            
-            // Get (possibly updated) ACL from DB, if returns error then UID is not known
-            db_acl, err := get_db_acl(&desfiretag, c, realuid_str)
-            if err != nil {
-                // No match
-                fmt.Println(fmt.Sprintf("WARNING: key %s, not found in DB", realuid_str))
-                // TODO: Should we null the ACL file just in case, because any key that is personalized but not either valid or revoked is in a weird limbo
-                // Cleanup
-                _ = desfiretag.Disconnect()
-                // Reset the err counter and increase tag index
-                errcnt = 0
-                i++
-                continue
-            }
-
-            // Check for ACL update
-            if (acl != db_acl) {
-                fmt.Println(fmt.Sprintf("NOTICE: card ACL (%x) does not match DB (%x), ", acl, db_acl))
-
-                // Update the ACL file on card
-                newaclbytes := make([]byte, 8)
-                n := binary.PutUvarint(newaclbytes, db_acl)
-                if (n < 0) {
-                    fmt.Println(fmt.Sprintf("binary.PutUvarint returned %d, skipping tag", n))
-                    _ = desfiretag.Disconnect()
-                    i++
-                    errcnt = 0
-                    continue TagLoop
-                }
-                err := update_acl_file(&desfiretag, &newaclbytes)
-                if err != nil {
-                    // TODO: Retry only on RF-errors
-                    _ = desfiretag.Disconnect()
-                    errcnt++
-                    if errcnt < 3 {
-                        fmt.Println(fmt.Sprintf("failed (%s), retrying", err))
-                        continue TagLoop
-                    }
-                    fmt.Println(fmt.Sprintf("failed (%s), retry-count exceeded, skipping tag", err))
-                    i++
-                    errcnt = 0
-                    continue TagLoop
-                }
-            }
-
-
-            // Now check the ACL match
-            if (db_acl & required_acl) == 0 {
-                fmt.Println(fmt.Sprintf("NOTICE: Found valid key %s, but ACL (%x) not granted", realuid_str, required_acl))
-                // TODO: Publish a ZMQ message or something
-            } else {
+            if tag_valid {
                 valid_found = true
-                fmt.Println(fmt.Sprintf("SUCCESS: Access granted to %s with ACL (%x)", realuid_str, db_acl))
             }
-
-            // Cleanup
-            _ = desfiretag.Disconnect()
-            // Reset the err counter and increase tag index
-            errcnt = 0
-            i++
         }
         if !valid_found {
             fmt.Println("Access DENIED")
@@ -499,10 +472,12 @@ func main() {
             go pulse_gpio(green_led, gpiomap["green_led"].(map[interface{}]interface{})["time"].(int))
             go pulse_gpio(relay, gpiomap["relay"].(map[interface{}]interface{})["time"].(int))
         }
+
         // Run GC at this time
         runtime.GC()
         // Wait a moment before continuing with fast polling
         time.Sleep(500 * time.Millisecond)
+
     }
 }
 
