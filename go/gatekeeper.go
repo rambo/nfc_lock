@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/signal"
 	"runtime"
+	"errors"
 //    "strconv"
     "encoding/hex"
     "encoding/binary"
@@ -179,6 +180,31 @@ func check_revoked(desfiretag *freefare.DESFireTag, c *sqlite3.Conn, realuid_str
     return revoked_found, nil
 }
 
+func read_and_parse_acl_file(desfiretag *freefare.DESFireTag) (uint64, error) {
+    fmt.Print("Re-auth with ACL read key, ")
+    err := desfiretag.Authenticate(keychain.acl_read_key_id,*keychain.acl_read_key)
+    if err != nil {
+        return 0, err
+    }
+    fmt.Println("Done")
+
+    aclbytes := make([]byte, 8)
+    fmt.Print("Reading ACL data file, ")
+    bytesread, err := desfiretag.ReadData(appinfo.acl_file_id, 0, aclbytes)
+    if err != nil {
+        return 0, err
+    }
+    if (bytesread < 8) {
+        fmt.Println(fmt.Sprintf("WARNING: ReadData read %d bytes, 8 expected", bytesread))
+    }
+    acl, n := binary.Uvarint(aclbytes)
+    if n <= 0 {
+        return 0, errors.New(fmt.Sprintf("ERROR: binary.Uvarint returned %d, skipping tag", n))
+    }
+    fmt.Println("Done")
+    return acl, nil
+}
+
 func main() {
     // TODO: configure this somewhere
     required_acl := uint64(1)
@@ -209,17 +235,17 @@ func main() {
     // Get open GPIO pins for our outputs
 	green_led, err := gpio.OpenPin(gpiomap["green_led"].(map[interface{}]interface{})["pin"].(int), gpio.ModeOutput)
 	if err != nil {
-		fmt.Printf("Error opening green_led! %s\n", err)
+		fmt.Printf("err opening green_led! %s\n", err)
 		return
 	}
 	red_led, err := gpio.OpenPin(gpiomap["red_led"].(map[interface{}]interface{})["pin"].(int), gpio.ModeOutput)
 	if err != nil {
-		fmt.Printf("Error opening green_led! %s\n", err)
+		fmt.Printf("err opening green_led! %s\n", err)
 		return
 	}
 	relay, err := gpio.OpenPin(gpiomap["relay"].(map[interface{}]interface{})["pin"].(int), gpio.ModeOutput)
 	if err != nil {
-		fmt.Printf("Error opening relay! %s\n", err)
+		fmt.Printf("err opening relay! %s\n", err)
 		return
 	}
 	// turn the leds off on exit
@@ -278,16 +304,16 @@ func main() {
 
             // Connect to this tag
             fmt.Print(fmt.Sprintf("Connecting to %s, ", tag.UID()))
-            error := desfiretag.Connect()
-            if error != nil {
+            err := desfiretag.Connect()
+            if err != nil {
                 // TODO: Retry only on RF-errors
                 _ = desfiretag.Disconnect()
                 errcnt++
                 if errcnt < 3 {
-                    fmt.Println(fmt.Sprintf("failed (%s), retrying", error))
+                    fmt.Println(fmt.Sprintf("failed (%s), retrying", err))
                     continue
                 }
-                fmt.Println(fmt.Sprintf("failed (%s), retry-count exceeded, skipping tag", error))
+                fmt.Println(fmt.Sprintf("failed (%s), retry-count exceeded, skipping tag", err))
                 i++
                 errcnt = 0
                 continue
@@ -296,16 +322,16 @@ func main() {
 
             aid := appinfo.aid
             fmt.Print(fmt.Sprintf("Selecting application %d, ", aid.Aid()))
-            error = desfiretag.SelectApplication(aid);
-            if error != nil {
+            err = desfiretag.SelectApplication(aid);
+            if err != nil {
                 // TODO: Retry only on RF-errors
                 _ = desfiretag.Disconnect()
                 errcnt++
                 if errcnt < 3 {
-                    fmt.Println(fmt.Sprintf("failed (%s), retrying", error))
+                    fmt.Println(fmt.Sprintf("failed (%s), retrying", err))
                     continue
                 }
-                fmt.Println(fmt.Sprintf("failed (%s), retry-count exceeded, skipping tag", error))
+                fmt.Println(fmt.Sprintf("failed (%s), retry-count exceeded, skipping tag", err))
                 i++
                 errcnt = 0
                 continue
@@ -313,16 +339,16 @@ func main() {
             fmt.Println("Done")
 
             fmt.Print("Authenticating, ")
-            error = desfiretag.Authenticate(keychain.uid_read_key_id,*keychain.uid_read_key)
-            if error != nil {
+            err = desfiretag.Authenticate(keychain.uid_read_key_id,*keychain.uid_read_key)
+            if err != nil {
                 // TODO: Retry only on RF-errors
                 _ = desfiretag.Disconnect()
                 errcnt++
                 if errcnt < 3 {
-                    fmt.Println(fmt.Sprintf("failed (%s), retrying", error))
+                    fmt.Println(fmt.Sprintf("failed (%s), retrying", err))
                     continue
                 }
-                fmt.Println(fmt.Sprintf("failed (%s), retry-count exceeded, skipping tag", error))
+                fmt.Println(fmt.Sprintf("failed (%s), retry-count exceeded, skipping tag", err))
                 i++
                 errcnt = 0
                 continue
@@ -330,24 +356,23 @@ func main() {
             fmt.Println("Done")
 
             // Get card real UID        
-            realuid_str, error := desfiretag.CardUID()
-            if error != nil {
+            realuid_str, err := desfiretag.CardUID()
+            if err != nil {
                 // TODO: Retry only on RF-errors
                 _ = desfiretag.Disconnect()
                 errcnt++
                 if errcnt < 3 {
-                    fmt.Println(fmt.Sprintf("Failed to read card real UID (%s), retrying", error))
+                    fmt.Println(fmt.Sprintf("Failed to read card real UID (%s), retrying", err))
                     continue
                 }
-                fmt.Println(fmt.Sprintf("Failed to read card real UID (%s), retry-count exceeded, skipping tag", error))
+                fmt.Println(fmt.Sprintf("Failed to read card real UID (%s), retry-count exceeded, skipping tag", err))
                 i++
                 errcnt = 0
                 continue
             }
-
-            realuid, error := hex.DecodeString(realuid_str)
-            if error != nil {
-                fmt.Println(fmt.Sprintf("ERROR: Failed to parse real UID (%s), skipping tag", error))
+            realuid, err := hex.DecodeString(realuid_str)
+            if err != nil {
+                fmt.Println(fmt.Sprintf("ERROR: Failed to parse real UID (%s), skipping tag", err))
                 _ = desfiretag.Disconnect()
                 i++
                 errcnt = 0
@@ -356,9 +381,9 @@ func main() {
             fmt.Println("Got real UID:", hex.EncodeToString(realuid));
 
             // Calculate the diversified keys
-            error = recalculate_diversified_keys(realuid[:])
-            if error != nil {
-                fmt.Println(fmt.Sprintf("ERROR: Failed to get diversified ACL keys (%s), skipping tag", error))
+            err = recalculate_diversified_keys(realuid[:])
+            if err != nil {
+                fmt.Println(fmt.Sprintf("ERROR: Failed to get diversified ACL keys (%s), skipping tag", err))
                 _ = desfiretag.Disconnect()
                 i++
                 errcnt = 0
@@ -368,63 +393,32 @@ func main() {
             // Check for revoked key
             revoked_found, err := check_revoked(&desfiretag, c, realuid_str)
             if err != nil {
-                fmt.Println(fmt.Sprintf("revoked_check_revoked returned error (%s)", err))
+                fmt.Println(fmt.Sprintf("check_revoked returned err (%s)", err))
                 revoked_found = true
             }
             if revoked_found {
                 _ = desfiretag.Disconnect()
-                // Reset the error counter and increase tag index
+                // Reset the err counter and increase tag index
                 errcnt = 0
                 i++
                 continue
             }
 
-            fmt.Print("Re-auth with ACL read key, ")
-            error = desfiretag.Authenticate(keychain.acl_read_key_id,*keychain.acl_read_key)
-            if error != nil {
+            acl, err := read_and_parse_acl_file(&desfiretag)
+            if err != nil {
                 // TODO: Retry only on RF-errors
                 _ = desfiretag.Disconnect()
                 errcnt++
                 if errcnt < 3 {
-                    fmt.Println(fmt.Sprintf("failed (%s), retrying", error))
+                    fmt.Println(fmt.Sprintf("failed (%s), retrying", err))
                     continue
                 }
-                fmt.Println(fmt.Sprintf("failed (%s), retry-count exceeded, skipping tag", error))
+                fmt.Println(fmt.Sprintf("failed (%s), retry-count exceeded, skipping tag", err))
                 i++
                 errcnt = 0
                 continue
             }
-            fmt.Println("Done")
-
-            aclbytes := make([]byte, 8)
-            fmt.Print("Reading ACL data file, ")
-            bytesread, error := desfiretag.ReadData(appinfo.acl_file_id, 0, aclbytes)
-            if error != nil {
-                // TODO: Retry only on RF-errors
-                _ = desfiretag.Disconnect()
-                errcnt++
-                if errcnt < 3 {
-                    fmt.Println(fmt.Sprintf("failed (%s), retrying", error))
-                    continue
-                }
-                fmt.Println(fmt.Sprintf("failed (%s), retry-count exceeded, skipping tag", error))
-                i++
-                errcnt = 0
-                continue
-            }
-            if (bytesread < 8) {
-                fmt.Println(fmt.Sprintf("WARNING: ReadData read %d bytes, 8 expected", bytesread))
-            }
-            acl, n := binary.Uvarint(aclbytes)
-            if n <= 0 {
-                fmt.Println(fmt.Sprintf("ERROR: binary.Uvarint returned %d, skipping tag", n))
-                _ = desfiretag.Disconnect()
-                i++
-                errcnt = 0
-                continue
-            }
-            fmt.Println("Done")
-            //fmt.Println("DEBUG: acl:", acl)
+            fmt.Println("DEBUG: acl:", acl)
 
             // Check for known key
             sql := "SELECT rowid, * FROM keys where uid=?"
@@ -489,7 +483,7 @@ func main() {
             // Cleanup
             _ = desfiretag.Disconnect()
             
-            // Reset the error counter and increase tag index
+            // Reset the err counter and increase tag index
             errcnt = 0
             i++
         }
