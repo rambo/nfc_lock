@@ -227,6 +227,15 @@ func check_tag(desfiretag *freefare.DESFireTag, c *sqlite3.Conn, required_acl ui
     connected := false
     
 RETRY:
+    if err != nil {
+        // TODO: Retry only on RF-errors
+        errcnt++
+        if errcnt < errlimit {
+            fmt.Println(fmt.Sprintf("failed (%s), retrying", err))
+        }
+        fmt.Println(fmt.Sprintf("failed (%s), retry-count exceeded, skipping tag", err))
+        goto FAIL
+    }
     if connected {
         _ = desfiretag.Disconnect()
     }
@@ -235,14 +244,7 @@ RETRY:
     fmt.Print(fmt.Sprintf("Connecting to %s, ", desfiretag.UID()))
     err = desfiretag.Connect()
     if err != nil {
-        // TODO: Retry only on RF-errors
-        errcnt++
-        if errcnt < errlimit {
-            fmt.Println(fmt.Sprintf("failed (%s), retrying", err))
-            goto RETRY
-        }
-        fmt.Println(fmt.Sprintf("failed (%s), retry-count exceeded, skipping tag", err))
-        goto FAIL
+        goto RETRY
     }
     fmt.Println("done")
     connected = true
@@ -250,28 +252,14 @@ RETRY:
     fmt.Print(fmt.Sprintf("Selecting application %d, ", appinfo.aid.Aid()))
     err = desfiretag.SelectApplication(appinfo.aid);
     if err != nil {
-        // TODO: Retry only on RF-errors
-        errcnt++
-        if errcnt < errlimit {
-            fmt.Println(fmt.Sprintf("failed (%s), retrying", err))
-            goto RETRY
-        }
-        fmt.Println(fmt.Sprintf("failed (%s), retry-count exceeded, skipping tag", err))
-        goto FAIL
+        goto RETRY
     }
     fmt.Println("Done")
 
     fmt.Print("Authenticating, ")
     err = desfiretag.Authenticate(keychain.uid_read_key_id,*keychain.uid_read_key)
     if err != nil {
-        // TODO: Retry only on RF-errors
-        errcnt++
-        if errcnt < errlimit {
-            fmt.Println(fmt.Sprintf("failed (%s), retrying", err))
-            goto RETRY
-        }
-        fmt.Println(fmt.Sprintf("failed (%s), retry-count exceeded, skipping tag", err))
-        goto FAIL
+        goto RETRY
     }
     fmt.Println("Done")
 
@@ -279,13 +267,7 @@ RETRY:
     realuid_str, err = desfiretag.CardUID()
     if err != nil {
         // TODO: Retry only on RF-errors
-        errcnt++
-        if errcnt < errlimit {
-            fmt.Println(fmt.Sprintf("failed (%s), retrying", err))
-            goto RETRY
-        }
-        fmt.Println(fmt.Sprintf("failed (%s), retry-count exceeded, skipping tag", err))
-        goto FAIL
+        goto RETRY
     }
     realuid, err = hex.DecodeString(realuid_str)
     if err != nil {
@@ -313,14 +295,7 @@ RETRY:
 
     acl, err = read_and_parse_acl_file(desfiretag)
     if err != nil {
-        // TODO: Retry only on RF-errors
-        errcnt++
-        if errcnt < errlimit {
-            fmt.Println(fmt.Sprintf("failed (%s), retrying", err))
-            goto RETRY
-        }
-        fmt.Println(fmt.Sprintf("failed (%s), retry-count exceeded, skipping tag", err))
-        goto FAIL
+        goto RETRY
     }
     //fmt.Println("DEBUG: acl:", acl)
 
@@ -346,14 +321,7 @@ RETRY:
         }
         err := update_acl_file(desfiretag, &newaclbytes)
         if err != nil {
-            // TODO: Retry only on RF-errors
-            errcnt++
-            if errcnt < errlimit {
-                fmt.Println(fmt.Sprintf("failed (%s), retrying", err))
-                goto RETRY
-            }
-            fmt.Println(fmt.Sprintf("failed (%s), retry-count exceeded, skipping tag", err))
-            goto FAIL
+            goto RETRY
         }
     }
 
