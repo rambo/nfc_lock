@@ -10,7 +10,14 @@ import (
     "encoding/hex"
     "encoding/binary"
     "github.com/fuzxxl/nfc/2.0/nfc"    
-    "github.com/fuzxxl/freefare/0.3/freefare"    
+    "github.com/fuzxxl/freefare/0.3/freefare"
+/**
+ * TODO: Switch the SQLite library
+00:47 <Wessie> mashiara_: you're using an old sqlite3 project it seems
+00:48 <mashiara_> wessie: is there a recommended one, I think that was what Google coughed up when I went looking for SQLite library
+00:49 <Wessie> mashiara_: I've used http://godoc.org/github.com/mattn/go-sqlite3 in the past
+00:50 <Wessie> I can't say that is the actual cause, but it might be since I don't see much wrong in the code
+ */
     "code.google.com/p/go-sqlite/go1/sqlite3"
     "time"
     "github.com/davecheney/gpio"
