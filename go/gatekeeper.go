@@ -231,10 +231,10 @@ RETRY:
         // TODO: Retry only on RF-errors
         errcnt++
         if errcnt > errlimit {
-            fmt.Println(fmt.Sprintf("failed (%s), retrying", err))
+            fmt.Println(fmt.Sprintf("failed (%s), retry-limit exceeded (%d/%d), skipping tag", err, errcnt, errlimit))
+            goto FAIL
         }
-        fmt.Println(fmt.Sprintf("failed (%s), retry-count exceeded, skipping tag", err))
-        goto FAIL
+        fmt.Println(fmt.Sprintf("failed (%s), retrying (%d)", err, errcnt))
     }
     if connected {
         _ = desfiretag.Disconnect()
