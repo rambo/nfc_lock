@@ -481,15 +481,6 @@ func main() {
                     fmt.Println("WARNING: Timeout while checking tag")
                     _ = desfiretag.Disconnect()
             }
-            /*
-            tag_valid, err := check_tag(&desfiretag, db, required_acl)
-            if err != nil {
-                continue
-            }
-            if tag_valid {
-                valid_found = true
-            }
-            */
         }
         // Mark for GC
         tags = nil
