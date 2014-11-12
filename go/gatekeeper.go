@@ -245,6 +245,7 @@ func get_db_acl(desfiretag *freefare.DESFireTag, db *sql.DB, realuid_str string)
 func check_tag_channel(desfiretag *freefare.DESFireTag, db *sql.DB, required_acl uint64, ch chan TagResult) {
     result, err := check_tag(desfiretag, db, required_acl)
     ch <- TagResult{result, err}
+    close(ch)
 }
 
 func check_tag(desfiretag *freefare.DESFireTag, db *sql.DB, required_acl uint64) (bool, error) {
@@ -463,20 +464,23 @@ func main() {
             ch := make(chan TagResult, 1)
             go check_tag_channel(&desfiretag, db, required_acl, ch)
             select {
-                case res := <-ch:
-                    /**
-                     * Probably not needed
-                    if res.err != nil {
-                    }
-                     */
-                    if res.is_valid {
-                        valid_found = true
+                case res, ok := <-ch:
+                    if !ok {
+                        // Channel closed
+                    } else {
+                        /**
+                         * Probably not needed
+                        if res.err != nil {
+                        }
+                         */
+                        if res.is_valid {
+                            valid_found = true
+                        }
                     }
                 case <-time.After(time.Second * 1):
                     fmt.Println("WARNING: Timeout while checking tag")
                     _ = desfiretag.Disconnect()
             }
-            close(ch)
             /*
             tag_valid, err := check_tag(&desfiretag, db, required_acl)
             if err != nil {
