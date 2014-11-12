@@ -35,7 +35,7 @@ Install library dependencies
     go get github.com/fuzxxl/freefare/0.3/freefare
     go get gopkg.in/yaml.v2
     go get github.com/jacobsa/crypto/cmac
-    go get code.google.com/p/go-sqlite/go1/sqlite3
+    go get github.com/mattn/go-sqlite3
     go get github.com/davecheney/gpio
     go get github.com/davecheney/gpio/rpi
 
@@ -50,10 +50,24 @@ Then edit `/etc/apt/sources.list.d/xivilization-raspbian.list` and switch to htt
 ## Terms
 
   - Card (PICC in NXP terms): The DESFire EV1 chip+antenna in a package (fob, card, sticker...)
-  - Personalisation step: Where card default master key is changed and applications are defined.
+  - Pre-Personalization step: Where card default master key is changed and applications are defined.
   - Application: collection of files on the card, application can have multiple keys for various purposes
-  - Provisioning step: Where a personalized card is issued to a card holder and the card (plus backing datababase) is updated with relevant info
+  - Provisioning (or personalization) step: Where a personalized card is issued to a card holder and the card (plus backing datababase) is updated with relevant info
   - Diversified key: Key that has been derived from a master key via the method described in NXP AN19022
-  
-  
+
+## SQLite for keys
+
+Create a test file `sqlite3 keys.db`:
+
+    CREATE TABLE keys(uid TEXT UNIQUE, acl INTEGER);
+    CREATE TABLE revoked(uid TEXT UNIQUE);
+
+Prepare some tags and insert their (real) UIDs to the grants and revokes
+
+    INSERT INTO revoked VALUES ("04453069b21e80");
+    INSERT INTO keys VALUES ("04212f69b21e80", 1);
+
+In reality you will generate this file based on your person registry (keep track of validity times etc there, then regenerate the keydb for the door).
+
+NOTE: While we use **unsigned** 64bit integers for ACL flags SQLite integers are always signed.
 

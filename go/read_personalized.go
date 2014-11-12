@@ -2,8 +2,6 @@ package main
 
 import (
     "fmt"
-    "os"
-    "strconv"
     "encoding/hex"
     "encoding/binary"
     "github.com/fuzxxl/nfc/2.0/nfc"    
@@ -13,37 +11,7 @@ import (
 )
 
 
-
 func main() {
-    if (len(os.Args) < 3) {
-        fmt.Println("Usage:")
-        fmt.Println(fmt.Sprintf("  %s member-id-as-decimal acl-value-as-hex", os.Args[0]))
-        os.Exit(1)
-    }
-
-    newmid64, error := strconv.ParseUint(os.Args[1], 10, 16)
-    if (error != nil) {
-         panic(error)
-    }
-    newmid := uint16(newmid64)
-
-    newacl, error := strconv.ParseUint(os.Args[2], 16, 64)
-    if (error != nil) {
-         panic(error)
-    }
-
-    newaclbytes := make([]byte, 8)
-    n := binary.PutUvarint(newaclbytes, newacl)
-    if (n < 0) {
-        panic(fmt.Sprintf("binary.PutUvarint returned %d", n))
-    }
-    newmidbytes := make([]byte, 2)
-    n = binary.PutUvarint(newmidbytes, uint64(newmid))
-    if (n < 0) {
-        panic(fmt.Sprintf("binary.PutUvarint returned %d", n))
-    }
-
-
     keymap, err := helpers.LoadYAMLFile("keys.yaml")
     if err != nil {
         panic(err)
@@ -76,10 +44,6 @@ func main() {
     if err != nil {
         panic(err)
     }
-    prov_key_id, err := helpers.String2byte(appmap["hacklab_acl"].(map[interface{}]interface{})["provisioning_key_id"].(string))
-    if err != nil {
-        panic(err)
-    }
     acl_file_id, err := helpers.String2byte(appmap["hacklab_acl"].(map[interface{}]interface{})["acl_file_id"].(string))
     if err != nil {
         panic(err)
@@ -98,10 +62,6 @@ func main() {
 
     // Bases for the diversified keys    
     acl_read_base, err := hex.DecodeString(keymap["acl_read_key"].(string))
-    if err != nil {
-        panic(err)
-    }
-    prov_key_base, err := hex.DecodeString(keymap["prov_master"].(string))
     if err != nil {
         panic(err)
     }
@@ -170,12 +130,6 @@ func main() {
         }
         acl_read_key := helpers.Bytes2aeskey(acl_read_bytes)
 
-        prov_key_bytes, err := keydiversification.AES128(prov_key_base, aidbytes, realuid, sysid)
-        if err != nil {
-            panic(err)
-        }
-        prov_key := helpers.Bytes2aeskey(prov_key_bytes)
-
         fmt.Println("Re-auth with ACL read key")
         error = desfiretag.Authenticate(acl_read_key_id,*acl_read_key)
         if error != nil {
@@ -189,8 +143,7 @@ func main() {
             panic(error)
         }
         if (bytesread < 8) {
-            //panic(fmt.Sprintf("ReadData read %d bytes, 8 expected", bytesread))
-            fmt.Println(fmt.Sprintf("ReadData read %d bytes, 8 expected", bytesread))
+            panic(fmt.Sprintf("ReadData read %d bytes, 8 expected", bytesread))
         }
         acl, n := binary.Uvarint(aclbytes)
         if n <= 0 {
@@ -216,51 +169,6 @@ func main() {
         mid := uint16(mid64)
         fmt.Println("mid:", mid)
 
-        if (mid == newmid && acl == newacl) {
-            // Do nothing
-            fmt.Println("No need to update ACL and member-id")
-        } else {
-
-            fmt.Println("Re-auth with provisioning key")
-            error = desfiretag.Authenticate(prov_key_id,*prov_key)
-            if error != nil {
-                panic(error)
-            }
-            fmt.Println("Done");
-            
-            fmt.Println("Writing ACL file")
-            bytewritten, error := desfiretag.WriteData(acl_file_id, 0, newaclbytes)
-            if error != nil {
-                panic(error)
-            }
-            if (bytewritten < 8) {
-                //panic(fmt.Sprintf("WriteData wrote %d bytes, 8 expected", bytewritten))
-                fmt.Println(fmt.Sprintf("WriteData wrote %d bytes, 8 expected", bytewritten))
-            }
-            fmt.Println("Done");
-
-            fmt.Println("Writing member-id file")
-            bytewritten, error = desfiretag.WriteData(mid_file_id, 0, newmidbytes)
-            if error != nil {
-                panic(error)
-            }
-            if (bytewritten < 2) {
-                //panic(fmt.Sprintf("WriteData wrote %d bytes, 2 expected", bytewritten))
-                fmt.Println(fmt.Sprintf("WriteData wrote %d bytes, 2 expected", bytewritten))
-            }
-            fmt.Println("Done");
-
-            /**
-             * For some reason this gives the dreaded "unknown error"
-            fmt.Println("Committing");
-            error = desfiretag.CommitTransaction()
-            if error != nil {
-                panic(error)
-            }
-            fmt.Println("Done");
-             */
-        }
-
 
 
         fmt.Println("Disconnecting");
@@ -269,12 +177,6 @@ func main() {
             panic(error)
         }
         fmt.Println("Done");
-
-        fmt.Println("*** BEGIN: SAVE THIS INFO ***");
-        fmt.Println(fmt.Sprintf("  Member id: %d", newmid))
-        fmt.Println(fmt.Sprintf("  Card UID: %s", realuid_str))
-        fmt.Println("*** END: SAVE THIS INFO ***");
-
     }
 
 }

@@ -46,7 +46,7 @@ func TestAES128(t *testing.T) {
     //fmt.Println(expect_newkey)
 
 
-    newkey, err := AES128(appkey, aid, uid, sysid);
+    newkey, err := AES128(appkey[:], aid[:], uid[:], sysid[:]);
     
     if (!bytes.Equal(newkey, expect_newkey)) {
         t.Errorf("Returned key %s does not match expected %s", hex.EncodeToString(newkey), hex.EncodeToString(expect_newkey));

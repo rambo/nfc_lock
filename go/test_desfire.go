@@ -28,12 +28,14 @@ func main() {
 			panic(error)
 		}
 
+        /*
 		nullkeydata := new([8]byte)
 		defaultkey := freefare.NewDESFireDESKey(*nullkeydata)
 		error = desfiretag.Authenticate(0,*defaultkey)
 		if error != nil {
 			panic(error)
 		}
+		*/
 		apps, error := desfiretag.ApplicationIds()
 		if error != nil {
 			panic(error)
