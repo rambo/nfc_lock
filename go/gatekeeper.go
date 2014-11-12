@@ -461,7 +461,7 @@ func main() {
             desfiretag := tag.(freefare.DESFireTag)
 
             ch := make(chan TagResult, 1)
-            check_tag_channel(&desfiretag, db, required_acl, ch)
+            go check_tag_channel(&desfiretag, db, required_acl, ch)
             select {
                 case res := <-ch:
                     /**
