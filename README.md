@@ -35,7 +35,7 @@ Install library dependencies
     go get github.com/fuzxxl/freefare/0.3/freefare
     go get gopkg.in/yaml.v2
     go get github.com/jacobsa/crypto/cmac
-    go get code.google.com/p/go-sqlite/go1/sqlite3
+    go get github.com/mattn/go-sqlite3
     go get github.com/davecheney/gpio
     go get github.com/davecheney/gpio/rpi
 

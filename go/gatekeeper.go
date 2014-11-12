@@ -2,23 +2,17 @@ package main
 
 import (
     "fmt"
-	"os"
-	"os/signal"
-	"runtime"
-	"errors"
+    "os"
+    "os/signal"
+    "runtime"
+    "errors"
 //    "strconv"
     "encoding/hex"
     "encoding/binary"
+    "database/sql"
     "github.com/fuzxxl/nfc/2.0/nfc"    
     "github.com/fuzxxl/freefare/0.3/freefare"
-/**
- * TODO: Switch the SQLite library
-00:47 <Wessie> mashiara_: you're using an old sqlite3 project it seems
-00:48 <mashiara_> wessie: is there a recommended one, I think that was what Google coughed up when I went looking for SQLite library
-00:49 <Wessie> mashiara_: I've used http://godoc.org/github.com/mattn/go-sqlite3 in the past
-00:50 <Wessie> I can't say that is the actual cause, but it might be since I don't see much wrong in the code
- */
-    "code.google.com/p/go-sqlite/go1/sqlite3"
+    _ "github.com/mattn/go-sqlite3"
     "time"
     "github.com/davecheney/gpio"
     "./keydiversification"
@@ -165,13 +159,22 @@ func update_acl_file(desfiretag *freefare.DESFireTag, newdata *[]byte) error {
     return nil
 }
 
-func check_revoked(desfiretag *freefare.DESFireTag, c *sqlite3.Conn, realuid_str string) (bool, error) {
+func check_revoked(desfiretag *freefare.DESFireTag, db *sql.DB, realuid_str string) (bool, error) {
     revoked_found := false
-    sql := "SELECT rowid FROM revoked where uid=?"
-    for s, err := c.Query(sql, realuid_str); err == nil; err = s.Next() {
+    stmt, err := db.Prepare("SELECT rowid FROM revoked where uid=?")
+    if err != nil {
+        return true, err
+    }
+    defer stmt.Close()
+    rows, err := stmt.Query(realuid_str)
+    if err != nil {
+        return true, err
+    }
+    defer rows.Close()    
+    for rows.Next() {    
         revoked_found = true
         var rowid int64
-        s.Scan(&rowid)     // Assigns 1st column to rowid, the rest to row
+        rows.Scan(&rowid)     // Assigns 1st column to rowid, the rest to row
         fmt.Println(fmt.Sprintf("WARNING: Found REVOKED key %s on row %d", realuid_str, rowid))
 
         // TODO: Publish a ZMQ message or something
@@ -211,18 +214,27 @@ func read_and_parse_acl_file(desfiretag *freefare.DESFireTag) (uint64, error) {
     return acl, nil
 }
 
-func get_db_acl(desfiretag *freefare.DESFireTag, c *sqlite3.Conn, realuid_str string) (uint64, error) {
-    sql := "SELECT rowid,acl FROM keys where uid=?"
-    for s, err := c.Query(sql, realuid_str); err == nil; err = s.Next() {
+func get_db_acl(desfiretag *freefare.DESFireTag, db *sql.DB, realuid_str string) (uint64, error) {
+    stmt, err := db.Prepare("SELECT rowid,acl FROM keys where uid=?")
+    if err != nil {
+        return 0, err
+    }
+    defer stmt.Close()
+    rows, err := stmt.Query(realuid_str)
+    if err != nil {
+        return 0, err
+    }
+    defer rows.Close()    
+    for rows.Next() {
         var rowid int64
-        row := make(sqlite3.RowMap)
-        s.Scan(&rowid, row)     // Assigns 1st column to rowid, the rest to row
-        return uint64(row["acl"].(int64)), nil
+        var acl int64
+        rows.Scan(&rowid, &acl)
+        return uint64(acl), nil
     }
     return 0, errors.New(fmt.Sprintf("UID not found"))
 }
 
-func check_tag(desfiretag *freefare.DESFireTag, c *sqlite3.Conn, required_acl uint64) (bool, error) {
+func check_tag(desfiretag *freefare.DESFireTag, db *sql.DB, required_acl uint64) (bool, error) {
     const errlimit = 3
     var err error = nil
     var realuid_str string
@@ -291,7 +303,7 @@ RETRY:
     }
 
     // Check for revoked key
-    revoked_found, err = check_revoked(desfiretag, c, realuid_str)
+    revoked_found, err = check_revoked(desfiretag, db, realuid_str)
     if err != nil {
         fmt.Println(fmt.Sprintf("check_revoked returned err (%s)", err))
         revoked_found = true
@@ -307,7 +319,7 @@ RETRY:
     //fmt.Println("DEBUG: acl:", acl)
 
     // Get (possibly updated) ACL from DB, if returns error then UID is not known
-    db_acl, err = get_db_acl(desfiretag, c, realuid_str)
+    db_acl, err = get_db_acl(desfiretag, db, realuid_str)
     if err != nil {
         // No match
         fmt.Println(fmt.Sprintf("WARNING: key %s, not found in DB", realuid_str))
@@ -359,51 +371,51 @@ func main() {
         panic(err)
     }
 
-    // Get cursor
-    c, err := sqlite3.Open("keys.db")
+    db, err := sql.Open("sqlite3", "./keys.db")
     if err != nil {
-        panic(err);
+        panic(err)
     }
-
+    defer db.Close()
 
     // Open NFC device
-    d, err := nfc.Open("");
+    nfcd, err := nfc.Open("");
     if err != nil {
         panic(err);
     }
+    defer nfcd.Close()
 
     // Start heartbeat goroutine
     go heartbeat()
 
     // Get open GPIO pins for our outputs
-	green_led, err := gpio.OpenPin(gpiomap["green_led"].(map[interface{}]interface{})["pin"].(int), gpio.ModeOutput)
-	if err != nil {
-		fmt.Printf("err opening green_led! %s\n", err)
-		return
-	}
-	red_led, err := gpio.OpenPin(gpiomap["red_led"].(map[interface{}]interface{})["pin"].(int), gpio.ModeOutput)
-	if err != nil {
-		fmt.Printf("err opening green_led! %s\n", err)
-		return
-	}
-	relay, err := gpio.OpenPin(gpiomap["relay"].(map[interface{}]interface{})["pin"].(int), gpio.ModeOutput)
-	if err != nil {
-		fmt.Printf("err opening relay! %s\n", err)
-		return
-	}
-	// turn the leds off on exit
-	exit_ch := make(chan os.Signal, 1)
-	signal.Notify(exit_ch, os.Interrupt)
-	signal.Notify(exit_ch, os.Kill)
-	go func() {
-		for _ = range exit_ch {
-			fmt.Printf("\nClearing and unexporting the pins.\n")
-			go clear_and_close(green_led)
-			go clear_and_close(red_led)
-			go clear_and_close(relay)
-			os.Exit(0)
-		}
-	}()
+    green_led, err := gpio.OpenPin(gpiomap["green_led"].(map[interface{}]interface{})["pin"].(int), gpio.ModeOutput)
+    if err != nil {
+        fmt.Printf("err opening green_led! %s\n", err)
+        return
+    }
+    red_led, err := gpio.OpenPin(gpiomap["red_led"].(map[interface{}]interface{})["pin"].(int), gpio.ModeOutput)
+    if err != nil {
+        fmt.Printf("err opening green_led! %s\n", err)
+        return
+    }
+    relay, err := gpio.OpenPin(gpiomap["relay"].(map[interface{}]interface{})["pin"].(int), gpio.ModeOutput)
+    if err != nil {
+        fmt.Printf("err opening relay! %s\n", err)
+        return
+    }
+    // turn the leds off on exit
+    exit_ch := make(chan os.Signal, 1)
+    signal.Notify(exit_ch, os.Interrupt)
+    signal.Notify(exit_ch, os.Kill)
+    go func() {
+        for _ = range exit_ch {
+            fmt.Printf("\nClearing and unexporting the pins.\n")
+            go clear_and_close(green_led)
+            go clear_and_close(red_led)
+            go clear_and_close(relay)
+            os.Exit(0)
+        }
+    }()
 
     fmt.Println("Starting mainloop")
     // mainloop
@@ -411,7 +423,7 @@ func main() {
         // Poll for tags
         var tags []freefare.Tag
         for {
-            tags, err = freefare.GetTags(d);
+            tags, err = freefare.GetTags(nfcd);
             if err != nil {
                 // TODO: Probably should not panic here
                 panic(err)
@@ -432,7 +444,7 @@ func main() {
             }
             desfiretag := tag.(freefare.DESFireTag)
 
-            tag_valid, err := check_tag(&desfiretag, c, required_acl)
+            tag_valid, err := check_tag(&desfiretag, db, required_acl)
             if err != nil {
                 continue
             }
