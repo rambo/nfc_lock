@@ -2,18 +2,19 @@ package main
 
 import (
     "fmt"
+    /*
     "os"
     "os/signal"
+    */
     "runtime"
     "errors"
-//    "strconv"
+    "time"
     "encoding/hex"
     "encoding/binary"
     "database/sql"
     "github.com/fuzxxl/nfc/2.0/nfc"    
     "github.com/fuzxxl/freefare/0.3/freefare"
     _ "github.com/mattn/go-sqlite3"
-    "time"
     "github.com/davecheney/gpio"
     "./keydiversification"
     "./helpers"
@@ -57,10 +58,17 @@ type KeyChain struct {
     acl_write_key *freefare.DESFireKey
 }
 
+// To pass multiple values over a channel
+type TagResult struct {
+    is_valid bool
+    err error
+}
+
 var (
     keychain = KeyChain{}
     appinfo = AppInfo{}
 )
+
 
 
 func init_appinfo() {
@@ -234,6 +242,11 @@ func get_db_acl(desfiretag *freefare.DESFireTag, db *sql.DB, realuid_str string)
     return 0, errors.New(fmt.Sprintf("UID not found"))
 }
 
+func check_tag_channel(desfiretag *freefare.DESFireTag, db *sql.DB, required_acl uint64, ch chan TagResult) {
+    result, err := check_tag(desfiretag, db, required_acl)
+    ch <- TagResult{result, err}
+}
+
 func check_tag(desfiretag *freefare.DESFireTag, db *sql.DB, required_acl uint64) (bool, error) {
     const errlimit = 3
     var err error = nil
@@ -244,7 +257,8 @@ func check_tag(desfiretag *freefare.DESFireTag, db *sql.DB, required_acl uint64)
     revoked_found := false
     errcnt := 0
     connected := false
-    
+
+    // TODO: Add a timeout for all of this, if not done in 1s or so we have a problem...    
 RETRY:
     if err != nil {
         // TODO: Retry only on RF-errors
@@ -385,7 +399,7 @@ func main() {
     defer nfcd.Close()
 
     // Start heartbeat goroutine
-    go heartbeat()
+    //go heartbeat()
 
     // Get open GPIO pins for our outputs
     green_led, err := gpio.OpenPin(gpiomap["green_led"].(map[interface{}]interface{})["pin"].(int), gpio.ModeOutput)
@@ -404,6 +418,7 @@ func main() {
         return
     }
     // turn the leds off on exit
+    /*
     exit_ch := make(chan os.Signal, 1)
     signal.Notify(exit_ch, os.Interrupt)
     signal.Notify(exit_ch, os.Kill)
@@ -416,6 +431,7 @@ func main() {
             os.Exit(0)
         }
     }()
+    */
 
     fmt.Println("Starting mainloop")
     // mainloop
@@ -444,6 +460,24 @@ func main() {
             }
             desfiretag := tag.(freefare.DESFireTag)
 
+            ch := make(chan TagResult, 1)
+            check_tag_channel(&desfiretag, db, required_acl, ch)
+            select {
+                case res := <-ch:
+                    /**
+                     * Probably not needed
+                    if res.err != nil {
+                    }
+                     */
+                    if res.is_valid {
+                        valid_found = true
+                    }
+                case <-time.After(time.Second * 1):
+                    fmt.Println("WARNING: Timeout while checking tag")
+                    _ = desfiretag.Disconnect()
+            }
+            close(ch)
+            /*
             tag_valid, err := check_tag(&desfiretag, db, required_acl)
             if err != nil {
                 continue
@@ -451,7 +485,11 @@ func main() {
             if tag_valid {
                 valid_found = true
             }
+            */
         }
+        // Mark for GC
+        tags = nil
+
         if !valid_found {
             fmt.Println("Access DENIED")
             go pulse_gpio(red_led, gpiomap["red_led"].(map[interface{}]interface{})["time"].(int))
