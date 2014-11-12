@@ -468,18 +468,14 @@ func main() {
                     if !ok {
                         // Channel closed
                     } else {
-                        /**
-                         * Probably not needed
-                        if res.err != nil {
-                        }
-                         */
                         if res.is_valid {
                             valid_found = true
                         }
                     }
                 case <-time.After(time.Second * 1):
                     fmt.Println("WARNING: Timeout while checking tag")
-                    _ = desfiretag.Disconnect()
+                    // TODO: Do we even need this, probably not...
+                    // _ = desfiretag.Disconnect()
             }
         }
         // Mark for GC
