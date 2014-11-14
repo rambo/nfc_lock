@@ -168,7 +168,7 @@ func update_acl_file(desfiretag *freefare.DESFireTag, newdata *[]byte) error {
     return nil
 }
 
-func check_revoked(desfiretag *freefare.DESFireTag, db *sql.DB, realuid_str string) (bool, error) {
+func check_revoked(db *sql.DB, realuid_str string) (bool, error) {
     revoked_found := false
     stmt, err := db.Prepare("SELECT rowid FROM revoked where uid=?")
     if err != nil {
@@ -188,12 +188,6 @@ func check_revoked(desfiretag *freefare.DESFireTag, db *sql.DB, realuid_str stri
 
         // TODO: Publish a ZMQ message or something
 
-        // Null the ACL file on card
-        nullaclbytes := make([]byte, 8)
-        err := update_acl_file(desfiretag, &nullaclbytes)
-        if err != nil {
-            return revoked_found, err
-        }
     }
     return revoked_found, nil
 }
@@ -319,12 +313,16 @@ RETRY:
     }
 
     // Check for revoked key
-    revoked_found, err = check_revoked(desfiretag, db, realuid_str)
+    revoked_found, err = check_revoked(db, realuid_str)
     if err != nil {
         fmt.Println(fmt.Sprintf("check_revoked returned err (%s)", err))
         revoked_found = true
     }
     if revoked_found {
+        // Null the ACL file on card
+        nullaclbytes := make([]byte, 8)
+        // Just go to fail even if this write fails
+        _ = update_acl_file(desfiretag, &nullaclbytes)
         goto FAIL
     }
 
