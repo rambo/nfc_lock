@@ -447,8 +447,7 @@ func main() {
         for {
             tags, err = freefare.GetTags(nfcd);
             if err != nil {
-                // TODO: Probably should not panic here
-                panic(err)
+                continue
             }
             if len(tags) > 0 {
                 break
