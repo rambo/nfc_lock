@@ -4,6 +4,7 @@ import (
     "fmt"
     "errors"
     "time"
+    "runtime"
     "encoding/hex"
     "encoding/binary"
     "github.com/fuzxxl/nfc/2.0/nfc"    
@@ -178,6 +179,7 @@ func main() {
     for {
         var tags []freefare.Tag
         for {
+            runtime.GC()
             tags, err = freefare.GetTags(d);
             if err != nil {
                 continue
