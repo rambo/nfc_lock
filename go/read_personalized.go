@@ -106,11 +106,11 @@ func init_appinfo() {
 }
 
 func recalculate_diversified_keys(realuid []byte) error {
-    acl_read_bytes, err := keydiversification.AES128(appinfo.acl_read_base[:], appinfo.aidbytes[:], realuid[:], appinfo.sysid[:])
+    acl_read_bytes, err := keydiversification.AES128(appinfo.acl_read_base, appinfo.aidbytes, realuid, appinfo.sysid)
     if err != nil {
         return err
     }
-    acl_write_bytes, err := keydiversification.AES128(appinfo.acl_write_base[:], appinfo.aidbytes[:], realuid[:], appinfo.sysid[:])
+    acl_write_bytes, err := keydiversification.AES128(appinfo.acl_write_base, appinfo.aidbytes, realuid, appinfo.sysid)
     if err != nil {
         return err
     }
@@ -245,7 +245,7 @@ func main() {
             fmt.Println("Got UID: ", hex.EncodeToString(realuid));
         
             // Calculate the diversified keys
-            err = recalculate_diversified_keys(realuid[:])
+            err = recalculate_diversified_keys(realuid)
             if err != nil {
                 fmt.Println(fmt.Sprintf("ERROR: Failed to get diversified ACL keys (%s), skipping tag", err))
                 continue
