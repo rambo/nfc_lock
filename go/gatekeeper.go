@@ -222,7 +222,7 @@ func read_and_parse_acl_file(desfiretag *freefare.DESFireTag) (uint64, error) {
     return acl, nil
 }
 
-func get_db_acl(desfiretag *freefare.DESFireTag, db *sql.DB, realuid_str string) (uint64, error) {
+func get_db_acl(db *sql.DB, realuid_str string) (uint64, error) {
     stmt, err := db.Prepare("SELECT rowid,acl FROM keys where uid=?")
     if err != nil {
         return 0, err
@@ -334,7 +334,7 @@ RETRY:
     //fmt.Println("DEBUG: acl:", acl)
 
     // Get (possibly updated) ACL from DB, if returns error then UID is not known
-    db_acl, err = get_db_acl(desfiretag, db, realuid_str)
+    db_acl, err = get_db_acl(db, realuid_str)
     if err != nil {
         // No match
         fmt.Println(fmt.Sprintf("WARNING: key %s, not found in DB", realuid_str))
