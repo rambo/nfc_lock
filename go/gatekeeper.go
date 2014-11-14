@@ -24,7 +24,7 @@ import (
 func heartbeat() {
     for {
         time.Sleep(2000 * time.Millisecond)
-        //fmt.Println("Dunka-dunk")
+        fmt.Println("Dunka-dunk")
     }
 }
 
@@ -151,22 +151,22 @@ func recalculate_diversified_keys(realuid []byte) error {
 }
 
 func update_acl_file(desfiretag *freefare.DESFireTag, newdata *[]byte) error {
-    //fmt.Print("Re-auth with ACL write key, ")
+    fmt.Print("Re-auth with ACL write key, ")
     err := desfiretag.Authenticate(keychain.acl_write_key_id,*keychain.acl_write_key)
     if err != nil {
         return err
     }
-    //fmt.Println("Done")
+    fmt.Println("Done")
 
-    //fmt.Print("Overwriting ACL data file, ")
+    fmt.Print("Overwriting ACL data file, ")
     byteswritten, err := desfiretag.WriteData(appinfo.acl_file_id, 0, *newdata)
     if err != nil {
         return err
     }
     if (byteswritten < 8) {
-        //fmt.Println(fmt.Sprintf("WARNING: WriteData wrote %d bytes, 8 expected", byteswritten))
+        fmt.Println(fmt.Sprintf("WARNING: WriteData wrote %d bytes, 8 expected", byteswritten))
     }
-    //fmt.Println("Done")
+    fmt.Println("Done")
     return nil
 }
 
@@ -186,7 +186,7 @@ func check_revoked(db *sql.DB, realuid_str string) (bool, error) {
         revoked_found = true
         var rowid int64
         rows.Scan(&rowid)     // Assigns 1st column to rowid, the rest to row
-        //fmt.Println(fmt.Sprintf("WARNING: Found REVOKED key %s on row %d", realuid_str, rowid))
+        fmt.Println(fmt.Sprintf("WARNING: Found REVOKED key %s on row %d", realuid_str, rowid))
 
         // TODO: Publish a ZMQ message or something
 
@@ -195,27 +195,27 @@ func check_revoked(db *sql.DB, realuid_str string) (bool, error) {
 }
 
 func read_and_parse_acl_file(desfiretag *freefare.DESFireTag) (uint64, error) {
-    //fmt.Print("Re-auth with ACL read key, ")
+    fmt.Print("Re-auth with ACL read key, ")
     err := desfiretag.Authenticate(keychain.acl_read_key_id,*keychain.acl_read_key)
     if err != nil {
         return 0, err
     }
-    //fmt.Println("Done")
+    fmt.Println("Done")
 
     aclbytes := make([]byte, 8)
-    //fmt.Print("Reading ACL data file, ")
+    fmt.Print("Reading ACL data file, ")
     bytesread, err := desfiretag.ReadData(appinfo.acl_file_id, 0, aclbytes)
     if err != nil {
         return 0, err
     }
     if (bytesread < 8) {
-        //fmt.Println(fmt.Sprintf("WARNING: ReadData read %d bytes, 8 expected", bytesread))
+        fmt.Println(fmt.Sprintf("WARNING: ReadData read %d bytes, 8 expected", bytesread))
     }
     acl, n := binary.Uvarint(aclbytes)
     if n <= 0 {
         return 0, errors.New(fmt.Sprintf("ERROR: binary.Uvarint returned %d, skipping tag", n))
     }
-    //fmt.Println("Done")
+    fmt.Println("Done")
     return acl, nil
 }
 
@@ -262,37 +262,37 @@ RETRY:
         // TODO: Retry only on RF-errors
         errcnt++
         if errcnt > errlimit {
-            //fmt.Println(fmt.Sprintf("failed (%s), retry-limit exceeded (%d/%d), skipping tag", err, errcnt, errlimit))
+            fmt.Println(fmt.Sprintf("failed (%s), retry-limit exceeded (%d/%d), skipping tag", err, errcnt, errlimit))
             goto FAIL
         }
-        //fmt.Println(fmt.Sprintf("failed (%s), retrying (%d)", err, errcnt))
+        fmt.Println(fmt.Sprintf("failed (%s), retrying (%d)", err, errcnt))
     }
     if connected {
         _ = desfiretag.Disconnect()
     }
 
     // Connect to this tag
-    //fmt.Print(fmt.Sprintf("Connecting to %s, ", desfiretag.UID()))
+    fmt.Print(fmt.Sprintf("Connecting to %s, ", desfiretag.UID()))
     err = desfiretag.Connect()
     if err != nil {
         goto RETRY
     }
-    //fmt.Println("done")
+    fmt.Println("done")
     connected = true
 
-    //fmt.Print(fmt.Sprintf("Selecting application %d, ", appinfo.aid.Aid()))
+    fmt.Print(fmt.Sprintf("Selecting application %d, ", appinfo.aid.Aid()))
     err = desfiretag.SelectApplication(appinfo.aid);
     if err != nil {
         goto RETRY
     }
-    //fmt.Println("Done")
+    fmt.Println("Done")
 
-    //fmt.Print("Authenticating, ")
+    fmt.Print("Authenticating, ")
     err = desfiretag.Authenticate(keychain.uid_read_key_id,*keychain.uid_read_key)
     if err != nil {
         goto RETRY
     }
-    //fmt.Println("Done")
+    fmt.Println("Done")
 
     // Get card real UID        
     realuid_str, err = desfiretag.CardUID()
@@ -302,22 +302,22 @@ RETRY:
     }
     realuid, err = hex.DecodeString(realuid_str)
     if err != nil {
-        //fmt.Println(fmt.Sprintf("ERROR: Failed to parse real UID (%s), skipping tag", err))
+        fmt.Println(fmt.Sprintf("ERROR: Failed to parse real UID (%s), skipping tag", err))
         goto FAIL
     }
-    //fmt.Println("Got real UID:", hex.EncodeToString(realuid));
+    fmt.Println("Got real UID:", hex.EncodeToString(realuid));
 
     // Calculate the diversified keys
     err = recalculate_diversified_keys(realuid[:])
     if err != nil {
-        //fmt.Println(fmt.Sprintf("ERROR: Failed to get diversified ACL keys (%s), skipping tag", err))
+        fmt.Println(fmt.Sprintf("ERROR: Failed to get diversified ACL keys (%s), skipping tag", err))
         goto FAIL
     }
 
     // Check for revoked key
     revoked_found, err = check_revoked(db, realuid_str)
     if err != nil {
-        //fmt.Println(fmt.Sprintf("check_revoked returned err (%s)", err))
+        fmt.Println(fmt.Sprintf("check_revoked returned err (%s)", err))
         revoked_found = true
     }
     if revoked_found {
@@ -332,26 +332,26 @@ RETRY:
     if err != nil {
         goto RETRY
     }
-    ////fmt.Println("DEBUG: acl:", acl)
+    //fmt.Println("DEBUG: acl:", acl)
 
     // Get (possibly updated) ACL from DB, if returns error then UID is not known
     db_acl, err = get_db_acl(db, realuid_str)
     if err != nil {
         // No match
-        //fmt.Println(fmt.Sprintf("WARNING: key %s, not found in DB", realuid_str))
+        fmt.Println(fmt.Sprintf("WARNING: key %s, not found in DB", realuid_str))
         // TODO: Should we null the ACL file just in case, because any key that is personalized but not either valid or revoked is in a weird limbo
         goto FAIL
     }
 
     // Check for ACL update
     if (acl != db_acl) {
-        //fmt.Println(fmt.Sprintf("NOTICE: card ACL (%x) does not match DB (%x), ", acl, db_acl))
+        fmt.Println(fmt.Sprintf("NOTICE: card ACL (%x) does not match DB (%x), ", acl, db_acl))
 
         // Update the ACL file on card
         newaclbytes := make([]byte, 8)
         n := binary.PutUvarint(newaclbytes, db_acl)
         if (n < 0) {
-            //fmt.Println(fmt.Sprintf("binary.PutUvarint returned %d, skipping tag", n))
+            fmt.Println(fmt.Sprintf("binary.PutUvarint returned %d, skipping tag", n))
             goto FAIL
         }
         err := update_acl_file(desfiretag, &newaclbytes)
@@ -362,12 +362,12 @@ RETRY:
 
     // Now check the ACL match
     if (db_acl & required_acl) == 0 {
-        //fmt.Println(fmt.Sprintf("NOTICE: Found valid key %s, but ACL (%x) not granted", realuid_str, required_acl))
+        fmt.Println(fmt.Sprintf("NOTICE: Found valid key %s, but ACL (%x) not granted", realuid_str, required_acl))
         // TODO: Publish a ZMQ message or something
         goto FAIL
     }    
 
-    //fmt.Println(fmt.Sprintf("SUCCESS: Access granted to %s with ACL (%x)", realuid_str, db_acl))
+    fmt.Println(fmt.Sprintf("SUCCESS: Access granted to %s with ACL (%x)", realuid_str, db_acl))
     return true, nil
 FAIL:
     if connected {
@@ -436,7 +436,7 @@ func main() {
     signal.Notify(exit_ch, os.Kill)
     go func() {
         for _ = range exit_ch {
-            //fmt.Printf("\nClearing and unexporting the pins.\n")
+            fmt.Printf("\nClearing and unexporting the pins.\n")
             go clear_and_close(green_led)
             go clear_and_close(red_led)
             go clear_and_close(relay)
@@ -459,14 +459,14 @@ func main() {
                 break
             }
             time.Sleep(100 * time.Millisecond)
-            ////fmt.Println("...polling")
+            //fmt.Println("...polling")
         }
 
         valid_found := false
         for i := 0; i < len(tags); i++ {
             tag := tags[i]
             if (tag.Type() != freefare.DESFire) {
-                //fmt.Println(fmt.Sprintf("Non-DESFire tag %s skipped", tag.UID()))
+                fmt.Println(fmt.Sprintf("Non-DESFire tag %s skipped", tag.UID()))
                 continue
             }
             desfiretag := tag.(freefare.DESFireTag)
@@ -483,7 +483,7 @@ func main() {
                         }
                     }
                 case <-time.After(time.Second * 1):
-                    //fmt.Println("WARNING: Timeout while checking tag")
+                    fmt.Println("WARNING: Timeout while checking tag")
                     // TODO: Do we even need this, probably not...
                     // _ = desfiretag.Disconnect()
             }
