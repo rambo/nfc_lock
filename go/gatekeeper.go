@@ -171,6 +171,7 @@ func update_acl_file(desfiretag *freefare.DESFireTag, newdata *[]byte) error {
 }
 
 func check_revoked(db *sql.DB, realuid_str string) (bool, error) {
+    return false,nil
     revoked_found := false
     stmt, err := db.Prepare("SELECT rowid FROM revoked where uid=?")
     if err != nil {
