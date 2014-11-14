@@ -266,8 +266,6 @@ func main() {
 
             fmt.Println("mid:", mid)
     
-    
-    
             fmt.Println("Disconnecting");
             error = desfiretag.Disconnect()
             if error != nil {
