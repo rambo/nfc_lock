@@ -6,7 +6,7 @@ import (
     "os"
     "os/signal"
     */
-    "runtime"
+    //"runtime"
     "errors"
     "time"
     "encoding/hex"
@@ -18,6 +18,7 @@ import (
     "github.com/davecheney/gpio"
     "./keydiversification"
     "./helpers"
+    "github.com/davecheney/profile"
 )
 
 func heartbeat() {
@@ -179,7 +180,7 @@ func check_revoked(desfiretag *freefare.DESFireTag, db *sql.DB, realuid_str stri
         return true, err
     }
     defer rows.Close()    
-    for rows.Next() {    
+    for rows.Next() {
         revoked_found = true
         var rowid int64
         rows.Scan(&rowid)     // Assigns 1st column to rowid, the rest to row
@@ -376,6 +377,15 @@ FAIL:
 }
 
 func main() {
+    cfg := profile.Config {
+            MemProfile: true,
+            NoShutdownHook: true, // do not hook SIGINT
+    }
+    // p.Stop() must be called before the program exits to  
+    // ensure profiling information is written to disk.
+    p := profile.Start(&cfg)
+    defer p.Stop()
+
     // TODO: configure this somewhere
     required_acl := uint64(1)
 
@@ -405,18 +415,15 @@ func main() {
     // Get open GPIO pins for our outputs
     green_led, err := gpio.OpenPin(gpiomap["green_led"].(map[interface{}]interface{})["pin"].(int), gpio.ModeOutput)
     if err != nil {
-        fmt.Printf("err opening green_led! %s\n", err)
-        return
+        panic(err)
     }
     red_led, err := gpio.OpenPin(gpiomap["red_led"].(map[interface{}]interface{})["pin"].(int), gpio.ModeOutput)
     if err != nil {
-        fmt.Printf("err opening green_led! %s\n", err)
-        return
+        panic(err)
     }
     relay, err := gpio.OpenPin(gpiomap["relay"].(map[interface{}]interface{})["pin"].(int), gpio.ModeOutput)
     if err != nil {
-        fmt.Printf("err opening relay! %s\n", err)
-        return
+        panic(err)
     }
     // turn the leds off on exit
     /*
@@ -490,7 +497,7 @@ func main() {
         }
 
         // Run GC at this time
-        runtime.GC()
+        //runtime.GC()
         // Wait a moment before continuing with fast polling
         time.Sleep(500 * time.Millisecond)
 
