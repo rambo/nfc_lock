@@ -18,7 +18,7 @@ import (
     //"github.com/davecheney/gpio"
     "./keydiversification"
     "./helpers"
-    "github.com/davecheney/profile"
+    // "github.com/davecheney/profile"
 )
 
 func heartbeat() {
@@ -220,6 +220,7 @@ func read_and_parse_acl_file(desfiretag *freefare.DESFireTag) (uint64, error) {
 }
 
 func get_db_acl(db *sql.DB, realuid_str string) (uint64, error) {
+    return 1,nil
     stmt, err := db.Prepare("SELECT rowid,acl FROM keys where uid=?")
     if err != nil {
         return 0, err
@@ -377,6 +378,7 @@ FAIL:
 }
 
 func main() {
+    /*
     cfg := profile.Config {
             MemProfile: true,
             NoShutdownHook: true, // do not hook SIGINT
@@ -385,6 +387,7 @@ func main() {
     // ensure profiling information is written to disk.
     p := profile.Start(&cfg)
     defer p.Stop()
+    */
 
     // TODO: configure this somewhere
     required_acl := uint64(1)
