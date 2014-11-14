@@ -15,7 +15,7 @@ import (
     "github.com/fuzxxl/nfc/2.0/nfc"    
     "github.com/fuzxxl/freefare/0.3/freefare"
     _ "github.com/mattn/go-sqlite3"
-    "github.com/davecheney/gpio"
+    //"github.com/davecheney/gpio"
     "./keydiversification"
     "./helpers"
     "github.com/davecheney/profile"
@@ -28,6 +28,7 @@ func heartbeat() {
     }
 }
 
+/*
 func pulse_gpio(pin gpio.Pin, ms int) {
     pin.Set()
     time.Sleep(time.Duration(ms) * time.Millisecond)
@@ -38,6 +39,7 @@ func clear_and_close(pin gpio.Pin) {
     pin.Clear()
     pin.Close()
 }
+*/
 
 // Use structs to pass data around so I can refactor 
 type AppInfo struct {
@@ -389,10 +391,12 @@ func main() {
 
     init_appinfo()
 
+    /*
     gpiomap, err := helpers.LoadYAMLFile("gpio.yaml")
     if err != nil {
         panic(err)
     }
+    */
 
     db, err := sql.Open("sqlite3", "./keys.db")
     if err != nil {
@@ -410,6 +414,7 @@ func main() {
     // Start heartbeat goroutine
     //go heartbeat()
 
+    /*
     // Get open GPIO pins for our outputs
     green_led, err := gpio.OpenPin(gpiomap["green_led"].(map[interface{}]interface{})["pin"].(int), gpio.ModeOutput)
     if err != nil {
@@ -423,6 +428,7 @@ func main() {
     if err != nil {
         panic(err)
     }
+    */
     // turn the leds off on exit
     /*
     exit_ch := make(chan os.Signal, 1)
@@ -487,10 +493,13 @@ func main() {
 
         if !valid_found {
             fmt.Println("Access DENIED")
-            go pulse_gpio(red_led, gpiomap["red_led"].(map[interface{}]interface{})["time"].(int))
+            //go pulse_gpio(red_led, gpiomap["red_led"].(map[interface{}]interface{})["time"].(int))
         } else {
+            fmt.Println("Blinkety-blink")
+            /*
             go pulse_gpio(green_led, gpiomap["green_led"].(map[interface{}]interface{})["time"].(int))
             go pulse_gpio(relay, gpiomap["relay"].(map[interface{}]interface{})["time"].(int))
+            */
         }
 
         // Run GC at this time
