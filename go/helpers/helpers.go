@@ -21,6 +21,7 @@ func String2aeskey(keydata_str string) (*freefare.DESFireKey, error) {
     return key,nil
 }
 
+// TODO: Make the reverse of this, but it requires using some unsafe pointer stuff...
 func Bytes2aeskey(source []byte) (*freefare.DESFireKey) {
     keydata := new([16]byte)
     copy(keydata[0:], source)
