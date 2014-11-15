@@ -4,6 +4,8 @@
 
 #include <err.h>
 #include <errno.h>
+#include <unistd.h>
+#include <signal.h>
 
 #include <string.h> // memcpy
 #include <stdlib.h> //realloc
@@ -14,6 +16,22 @@
 #include "smart_node_config.h"
 #include "keydiversification.h"
 
+// Catch signals
+static int s_interrupted = 0;
+static void s_signal_handler (int signal_value)
+{
+    s_interrupted = 1;
+}
+
+static void s_catch_signals (void)
+{
+    struct sigaction action;
+    action.sa_handler = s_signal_handler;
+    action.sa_flags = 0;
+    sigemptyset (&action.sa_mask);
+    sigaction (SIGINT, &action, NULL);
+    sigaction (SIGTERM, &action, NULL);
+}
 
 
 int main(int argc, char *argv[])
@@ -68,9 +86,43 @@ int main(int argc, char *argv[])
     }
     printf("Using device %s\n", connstring);
 
+    s_catch_signals();
+
+    // Mainloop
+    MifareTag *tags = NULL;
+    while(!s_interrupted)
+    {
+        tags = freefare_get_tags(device);
+        if (   !tags
+            || !tags[0])
+        {
+            // Limit polling speed to 10Hz
+            usleep(100 * 1000);
+            //printf("Polling ...\n");
+            continue;
+        }
+
+        for (int i = 0; (!error) && tags[i]; ++i)
+        {
+            char *tag_uid_str = freefare_get_tag_uid(tags[i]);
+            if (DESFIRE != freefare_get_tag_type(tags[i]))
+            {
+                // Skip non DESFire tags
+                printf("Skipping non DESFire tag %s\n", tag_uid_str);
+                free (tag_uid_str);
+                continue;
+            }
+
+            printf("Found DESFire tag %s\n", tag_uid_str);
 
 
-    
+        }
+        freefare_free_tags(tags);
+        // And if we had tags then wait half a sec before polling again
+        usleep(500 * 1000);
+    }
+
+    nfc_close (device);
     nfc_exit(nfc_ctx);
     exit(EXIT_SUCCESS);
 }
