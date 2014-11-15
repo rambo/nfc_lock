@@ -115,7 +115,7 @@ int main(int argc, char *argv[])
 
             printf("Found DESFire tag %s\n", tag_uid_str);
 
-
+            free (tag_uid_str);
         }
         freefare_free_tags(tags);
         // And if we had tags then wait half a sec before polling again
