@@ -115,7 +115,11 @@ func recalculate_diversified_keys(realuid []byte) error {
 func handle_tag(desfiretag *freefare.DESFireTag) {
     desfiretag.Connect()
 
-    uid_str:= desfiretag.UID()
+    //uid_str := desfiretag.UID()
+    uid_str, err := desfiretag.CardUID()
+    if err != nil {
+        return
+    }
     
     fmt.Printf("Found tag %s\n", uid_str)
 
