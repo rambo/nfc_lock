@@ -137,21 +137,22 @@ func init_appinfo() {
 }
 
 func recalculate_diversified_keys(realuid []byte) error {
+    /*
     fmt.Println("(static) appinfo.acl_read_base", appinfo.acl_read_base)
     fmt.Println("(static) appinfo.aid", appinfo.aid)
     fmt.Println("(static) appinfo.aidbytes", appinfo.aidbytes)
     fmt.Println("(static) appinfo.sysid", appinfo.sysid)
-
+    */
     acl_read_bytes, err := keydiversification.AES128(appinfo.acl_read_base, helpers.Aid2bytes(appinfo.aid), realuid, appinfo.sysid)
     if err != nil {
         return err
     }
-    fmt.Println("(new) acl_read_bytes:", acl_read_bytes)
+    //fmt.Println("(new) acl_read_bytes:", acl_read_bytes)
     acl_write_bytes, err := keydiversification.AES128(appinfo.acl_write_base, helpers.Aid2bytes(appinfo.aid), realuid, appinfo.sysid)
     if err != nil {
         return err
     }
-    fmt.Println("(new) acl_write_bytes: ",acl_write_bytes)
+    //fmt.Println("(new) acl_write_bytes: ",acl_write_bytes)
     keychain.acl_read_key = helpers.Bytes2aeskey(acl_read_bytes)
     keychain.acl_write_key = helpers.Bytes2aeskey(acl_write_bytes)
     return nil
