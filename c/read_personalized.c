@@ -45,6 +45,8 @@ int handle_tag(MifareTag tag, bool *tag_valid)
     char errstr[] = "";
     uint8_t errcnt = 0;
     bool connected = false;
+    MifareDESFireAID aid = mifare_desfire_aid_new(nfclock_aid[2] | (nfclock_aid[1] << 8) | (nfclock_aid[0] << 16));
+    //printf("uint32 for aid: 0x%lx\n", (unsigned long)mifare_desfire_aid_get_aid(aid));
 
 RETRY:
     if (err != 0)
@@ -54,24 +56,36 @@ RETRY:
         // TODO: resolve error string
         if (errcnt > errlimit)
         {
-            warn("failed (%s), retry-limit exceeded (%d/%d), skipping tag", errstr, errcnt, errlimit);
+            printf("failed (%s), retry-limit exceeded (%d/%d), skipping tag", errstr, errcnt, errlimit);
             goto FAIL;
         }
-        warn("failed (%s), retrying (%d)", errstr, errcnt);
+        printf("failed (%s), retrying (%d)", errstr, errcnt);
     }
     if (connected)
     {
         mifare_desfire_disconnect(tag);
+        connected = false;
     }
 
     printf("Connecting, ");
     err = mifare_desfire_connect(tag);
     if (err < 0)
     {
-        warn("Can't connect to Mifare DESFire target.");
+        printf("Can't connect to Mifare DESFire target.");
         goto RETRY;
     }
     printf("done\n");
+    connected = true;
+
+    printf("Selecting application, ");
+    err = mifare_desfire_select_application(tag, aid);
+    if (err < 0)
+    {
+        printf("Can't select application.");
+        goto RETRY;
+    }
+    printf("done\n");
+    free(aid);
 
 
     // All checks done seems good
@@ -79,6 +93,7 @@ RETRY:
     *tag_valid = true;
     return 0;
 FAIL:
+    free(aid);
     if (connected)
     {
         mifare_desfire_disconnect(tag);
