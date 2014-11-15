@@ -133,15 +133,12 @@ func handle_tag(desfiretag *freefare.DESFireTag) {
     }
     fmt.Println("Done");
 
-    /*
     realuid_str, err := desfiretag.CardUID()
     if err != nil {
         panic(err)
     }
-    */
 
-
-    realuid, err := hex.DecodeString(uid_str)
+    realuid, err := hex.DecodeString(realuid_str)
     if err != nil {
         fmt.Println(fmt.Sprintf("ERROR: Failed to parse real UID (%s), skipping tag", err))
         return
