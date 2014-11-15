@@ -146,13 +146,22 @@ func handle_tag(desfiretag *freefare.DESFireTag) {
     fmt.Println("Got UID: ", hex.EncodeToString(realuid));
 
     // Calculate the diversified keys
-    err = recalculate_diversified_keys(realuid[:])
+    err = recalculate_diversified_keys(realuid)
     if err != nil {
         fmt.Println(fmt.Sprintf("ERROR: Failed to get diversified ACL keys (%s), skipping tag", err))
         return
     }
 
     fmt.Println("Got real ACL read key: ", keychain.acl_read_key)
+
+    fmt.Print("Re-auth with ACL read key, ")
+    err = desfiretag.Authenticate(keychain.acl_read_key_id,*keychain.acl_read_key)
+    if err != nil {
+        fmt.Println(fmt.Sprintf("ERROR: Failed (%s), skipping tag", err))
+        return
+    }
+    fmt.Println("Done")
+
 
     desfiretag.Disconnect()
 }
