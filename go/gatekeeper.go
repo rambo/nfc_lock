@@ -412,7 +412,7 @@ func main() {
     if err != nil {
         panic(err);
     }
-    defer nfcd.Close()
+    //defer nfcd.Close()
 
     // Start heartbeat goroutine
     //go heartbeat()
