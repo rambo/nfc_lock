@@ -69,6 +69,7 @@ main(int argc, char *argv[])
 		continue;
 
 	    int res;
+	    // This is hex-encoded see the https://code.google.com/p/libfreefare/source/browse/libfreefare/freefare.c#189 on how to access the raw data
 	    char *tag_uid = freefare_get_tag_uid (tags[i]);
 
 	    res = mifare_desfire_connect (tags[i]);
