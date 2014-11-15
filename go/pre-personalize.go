@@ -28,7 +28,11 @@ func main() {
     }
 
     // Needed for diversification
-    aidbytes := helpers.Aid2bytes(aid)
+    aidbytes, err := hex.DecodeString(appmap["hacklab_acl"].(map[interface{}]interface{})["aid"].(string))
+    if err != nil {
+        panic(err)
+    }
+    //aidbytes := helpers.Aid2bytes(aid)
     sysid, err := hex.DecodeString(appmap["hacklab_acl"].(map[interface{}]interface{})["sysid"].(string))
     if err != nil {
         panic(err)

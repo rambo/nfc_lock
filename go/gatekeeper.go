@@ -92,7 +92,11 @@ func init_appinfo() {
     }
 
     // Needed for diversification
-    appinfo.aidbytes = helpers.Aid2bytes(appinfo.aid)
+    appinfo.aidbytes, err = hex.DecodeString(appmap["hacklab_acl"].(map[interface{}]interface{})["aid"].(string))
+    if err != nil {
+        panic(err)
+    }
+    //appinfo.aidbytes = helpers.Aid2bytes(appinfo.aid)
     appinfo.sysid, err = hex.DecodeString(appmap["hacklab_acl"].(map[interface{}]interface{})["sysid"].(string))
     if err != nil {
         panic(err)
