@@ -31,6 +31,7 @@ func heartbeat() {
 /*
 func pulse_gpio(pin gpio.Pin, ms int) {
     pin.Set()
+    // TODO: switch to time.Timer so we can reset the timer when a new call comes in
     time.Sleep(time.Duration(ms) * time.Millisecond)
     pin.Clear()
 }
