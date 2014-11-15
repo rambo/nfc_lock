@@ -174,6 +174,7 @@ int main(int argc, char *argv[])
             free (tag_uid_str);
 
             bool tag_valid = false;
+            // TODO: Timeout this so the program does not hang if tag leaves at inopportune time
             tagerror = handle_tag(tags[i], &tag_valid);
             if (tagerror != 0)
             {
