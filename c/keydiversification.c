@@ -25,8 +25,8 @@ int nfclock_diversify_key_aes128(uint8_t base_key[AES_BLOCK_SIZE], uint8_t aid[A
         return ret;
     }
 
-    // Create the message size is 1 for marker byte, 3 for aid, then the sizes for UID and sysid
-    uint16_t data_size = 1 + 3 + uid_size + sysid_size;
+    // Create the message size is 1 for marker byte, then the sizes for uid, aid and sysid
+    uint16_t data_size = 1 + uid_size + AID_SIZE + sysid_size;
     uint8_t *data = malloc(data_size);
     data[0] = 0x01;
     memcpy(&data[1], uid, uid_size);
