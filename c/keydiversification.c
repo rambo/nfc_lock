@@ -3,6 +3,9 @@
  */
 #include "keydiversification.h"
 
+// For debugging
+#include <stdio.h>
+
 /**
  * AES128 CMAC based diversification
  *
@@ -24,6 +27,14 @@ int nfclock_diversify_key_aes128(uint8_t base_key[AES_BLOCK_SIZE], uint8_t aid[3
     {
         return ret;
     }
+    
+    printf("DEBUG: in nfclock_diversify_key_aes128:\n");
+    printf("  sizeof(base_key)=%d\n", sizeof(base_key));
+    printf("  sizeof(aid)=%d\n", sizeof(aid));
+    printf("  sizeof(uid)=%d\n", sizeof(uid));
+    printf("  sizeof(sysid)=%d\n", sizeof(sysid));
+    printf("  sizeof(new_key)=%d\n", sizeof(new_key));
+    
 
     // Create the message
     uint8_t *data = malloc(1 + sizeof(uid) + sizeof(aid) + sizeof(sysid));
