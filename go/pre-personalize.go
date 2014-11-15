@@ -258,7 +258,7 @@ func main() {
 
 
         fmt.Println("Creating ACL data file");
-        error = desfiretag.CreateDataFile(acl_file_id, freefare.Enciphered, freefare.MakeDESFireAccessRights(acl_read_key_id, acl_write_key_id, prov_key_id, prov_key_id), 8, true)
+        error = desfiretag.CreateDataFile(acl_file_id, freefare.Enciphered, freefare.MakeDESFireAccessRights(acl_read_key_id, acl_write_key_id, prov_key_id, prov_key_id), 4, true)
         if error != nil {
             panic(error)
         }

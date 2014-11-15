@@ -168,15 +168,15 @@ func handle_tag(desfiretag *freefare.DESFireTag) {
     }
     fmt.Println("Done")
 
-    aclbytes := make([]byte, 8)
+    aclbytes := make([]byte, 4)
     fmt.Print("Reading ACL data file, ")
     bytesread, err := desfiretag.ReadData(appinfo.acl_file_id, 0, aclbytes)
     if err != nil {
         fmt.Println(fmt.Sprintf("ERROR: Failed (%s), skipping tag", err))
         return
     }
-    if (bytesread < 8) {
-        fmt.Println(fmt.Sprintf("WARNING: ReadData read %d bytes, 8 expected", bytesread))
+    if (bytesread < 4) {
+        fmt.Println(fmt.Sprintf("WARNING: ReadData read %d bytes, 4 expected", bytesread))
     }
     fmt.Println("Done")
     fmt.Println("aclbytes:", aclbytes)

@@ -27,13 +27,14 @@ func main() {
     }
     newmid := uint16(newmid64)
 
-    newacl, error := strconv.ParseUint(os.Args[2], 16, 64)
+    newacl64, error := strconv.ParseUint(os.Args[2], 16, 64)
     if (error != nil) {
          panic(error)
     }
+    newacl := uint32(newacl64)
 
-    newaclbytes := make([]byte, 8)
-    n := binary.PutUvarint(newaclbytes, newacl)
+    newaclbytes := make([]byte, 4)
+    n := binary.PutUvarint(newaclbytes, uint64(newacl))
     if (n < 0) {
         panic(fmt.Sprintf("binary.PutUvarint returned %d", n))
     }
@@ -182,20 +183,25 @@ func main() {
             panic(error)
         }
 
-        aclbytes := make([]byte, 8)
+        aclbytes := make([]byte, 4)
         fmt.Println("Reading ACL data file")
         bytesread, err := desfiretag.ReadData(acl_file_id, 0, aclbytes)
         if error != nil {
             panic(error)
         }
-        if (bytesread < 8) {
-            //panic(fmt.Sprintf("ReadData read %d bytes, 8 expected", bytesread))
-            fmt.Println(fmt.Sprintf("ReadData read %d bytes, 8 expected", bytesread))
+        if (bytesread <= 0) {
+            fmt.Println(fmt.Sprintf("ReadData read %d bytes", bytesread))
+            continue
         }
-        acl, n := binary.Uvarint(aclbytes)
+        if (bytesread < 4) {
+            //panic(fmt.Sprintf("ReadData read %d bytes, 4 expected", bytesread))
+            fmt.Println(fmt.Sprintf("ReadData read %d bytes, 4 expected", bytesread))
+        }
+        acl64, n := binary.Uvarint(aclbytes)
         if n <= 0 {
             panic(fmt.Sprintf("binary.Uvarint returned %d", n))
         }
+        acl := uint32(acl64)
         fmt.Println("acl:", acl)
 
         midbytes := make([]byte, 2)
@@ -233,9 +239,9 @@ func main() {
             if error != nil {
                 panic(error)
             }
-            if (bytewritten < 8) {
-                //panic(fmt.Sprintf("WriteData wrote %d bytes, 8 expected", bytewritten))
-                fmt.Println(fmt.Sprintf("WriteData wrote %d bytes, 8 expected", bytewritten))
+            if (bytewritten < 4) {
+                //panic(fmt.Sprintf("WriteData wrote %d bytes, 4 expected", bytewritten))
+                fmt.Println(fmt.Sprintf("WriteData wrote %d bytes, 4 expected", bytewritten))
             }
             fmt.Println("Done");
 
