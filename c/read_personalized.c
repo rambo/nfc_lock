@@ -47,6 +47,7 @@ int handle_tag(MifareTag tag, bool *tag_valid)
     bool connected = false;
     MifareDESFireAID aid = mifare_desfire_aid_new(nfclock_aid[2] | (nfclock_aid[1] << 8) | (nfclock_aid[0] << 16));
     //printf("uint32 for aid: 0x%lx\n", (unsigned long)mifare_desfire_aid_get_aid(aid));
+    MifareDESFireKey key;
 
 RETRY:
     if (err != 0)
@@ -81,11 +82,24 @@ RETRY:
     err = mifare_desfire_select_application(tag, aid);
     if (err < 0)
     {
+        free(aid);
         printf("Can't select application.");
         goto RETRY;
     }
     printf("done\n");
     free(aid);
+
+    printf("Authenticating, ");
+    key = mifare_desfire_aes_key_new_with_version((uint8_t*)&nfclock_uid_key, 0x0);
+    err = mifare_desfire_authenticate(tag, nfclock_uid_keyid, key);
+    if (err < 0)
+    {
+        free(key);
+        printf("Can't Authenticate. ");
+        goto RETRY;
+    }
+    free(key);
+    printf("done\n");
 
 
     // All checks done seems good
@@ -93,7 +107,6 @@ RETRY:
     *tag_valid = true;
     return 0;
 FAIL:
-    free(aid);
     if (connected)
     {
         mifare_desfire_disconnect(tag);
