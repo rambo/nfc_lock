@@ -37,7 +37,6 @@ Install library dependencies
     go get github.com/jacobsa/crypto/cmac
     go get github.com/mattn/go-sqlite3
     go get github.com/davecheney/gpio
-    go get github.com/davecheney/gpio/rpi
 
 ### RasPi
 
