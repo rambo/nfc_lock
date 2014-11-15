@@ -137,14 +137,19 @@ func init_appinfo() {
 }
 
 func recalculate_diversified_keys(realuid []byte) error {
+    fmt.Println("(static) appinfo.acl_read_base", appinfo.acl_read_base)
+    fmt.Println("(static) appinfo.aidbytes", appinfo.aidbytes)
+    fmt.Println("(static) appinfo.sysid", appinfo.sysid)
     acl_read_bytes, err := keydiversification.AES128(appinfo.acl_read_base, appinfo.aidbytes, realuid, appinfo.sysid)
     if err != nil {
         return err
     }
+    fmt.Println("(new) acl_read_bytes:", acl_read_bytes)
     acl_write_bytes, err := keydiversification.AES128(appinfo.acl_write_base, appinfo.aidbytes, realuid, appinfo.sysid)
     if err != nil {
         return err
     }
+    fmt.Println("(new) acl_write_bytes: ",acl_write_bytes)
     keychain.acl_read_key = helpers.Bytes2aeskey(acl_read_bytes)
     keychain.acl_write_key = helpers.Bytes2aeskey(acl_write_bytes)
     return nil
@@ -412,7 +417,7 @@ func main() {
     if err != nil {
         panic(err);
     }
-    //defer nfcd.Close()
+    defer nfcd.Close()
 
     // Start heartbeat goroutine
     //go heartbeat()
@@ -453,13 +458,6 @@ func main() {
     for {
         runtime.GC()
         // Poll for tags
-        nfcd.Close()
-        nfcd, err := nfc.Open("");
-        if err != nil {
-            fmt.Println(fmt.Sprintf("Error %s when Re-opening NFC interface", err))
-            time.Sleep(100 * time.Millisecond)
-            continue
-        }
         var tags []freefare.Tag
         for {
             tags, err = freefare.GetTags(nfcd)
