@@ -16,9 +16,9 @@
 #include "smart_node_config.h"
 #include "keydiversification.h"
 
-// Catch signals
+// Catch SIGINT and SIGTERM so we can do a clean exit
 static int s_interrupted = 0;
-static void s_signal_handler (int signal_value)
+static void s_signal_handler(int signal_value)
 {
     s_interrupted = 1;
 }
@@ -33,6 +33,59 @@ static void s_catch_signals (void)
     sigaction (SIGTERM, &action, NULL);
 }
 
+int handle_tag(MifareTag tag, bool *tag_valid)
+{
+    const uint8_t errlimit = 3;
+    int err = 0;
+    /*
+    uint32_t acl;
+    uint32_t db_acl;
+    bool revoked_found = false;
+    */
+    char errstr[] = "";
+    uint8_t errcnt = 0;
+    bool connected = false;
+
+RETRY:
+    if (err != 0)
+    {
+        // TODO: Retry only on RF-errors
+        ++errcnt;
+        // TODO: resolve error string
+        if (errcnt > errlimit)
+        {
+            warn("failed (%s), retry-limit exceeded (%d/%d), skipping tag", errstr, errcnt, errlimit);
+            goto FAIL;
+        }
+        warn("failed (%s), retrying (%d)", errstr, errcnt);
+    }
+    if (connected)
+    {
+        mifare_desfire_disconnect(tag);
+    }
+
+    printf("Connecting, ");
+    err = mifare_desfire_connect(tag);
+    if (err < 0)
+    {
+        warn("Can't connect to Mifare DESFire target.");
+        goto RETRY;
+    }
+    printf("done\n");
+
+
+    // All checks done seems good
+    mifare_desfire_disconnect(tag);
+    *tag_valid = true;
+    return 0;
+FAIL:
+    if (connected)
+    {
+        mifare_desfire_disconnect(tag);
+    }
+    *tag_valid = false;
+    return err;
+}
 
 int main(int argc, char *argv[])
 {
@@ -104,6 +157,8 @@ int main(int argc, char *argv[])
             continue;
         }
 
+        bool valid_found = false;
+        int tagerror = 0;
         for (int i = 0; (!error) && tags[i]; ++i)
         {
             char *tag_uid_str = freefare_get_tag_uid(tags[i]);
@@ -116,11 +171,31 @@ int main(int argc, char *argv[])
             }
 
             printf("Found DESFire tag %s\n", tag_uid_str);
-
             free (tag_uid_str);
+
+            bool tag_valid = false;
+            tagerror = handle_tag(tags[i], &tag_valid);
+            if (tagerror != 0)
+            {
+                tag_valid = false;
+                continue;
+            }
+            if (tag_valid)
+            {
+                valid_found = true;
+            }
         }
         freefare_free_tags(tags);
-        // And if we had tags then wait half a sec before polling again
+        if (valid_found)
+        {
+            printf("OK: valid tag found\n");
+        }
+        else
+        {
+            printf("ERROR: NO valid tag found\n");
+        }
+
+        // And if we had tags then wait half a sec before resuming polling again
         usleep(500 * 1000);
     }
 
