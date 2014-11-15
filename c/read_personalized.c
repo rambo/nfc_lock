@@ -96,6 +96,7 @@ int main(int argc, char *argv[])
         if (   !tags
             || !tags[0])
         {
+            freefare_free_tags(tags);
             // Limit polling speed to 10Hz
             usleep(100 * 1000);
             //printf("Polling ...\n");
