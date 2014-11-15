@@ -126,8 +126,15 @@ func handle_tag(desfiretag *freefare.DESFireTag) {
     }
     fmt.Println("Done");
 
+    fmt.Println("Authenticating");
+    err = desfiretag.Authenticate(keychain.uid_read_key_id,*keychain.uid_read_key)
+    if err != nil {
+        panic(err)
+    }
+    fmt.Println("Done");
+
     /*
-    uid_str, err := desfiretag.CardUID()
+    realuid_str, err := desfiretag.CardUID()
     if err != nil {
         panic(err)
     }
