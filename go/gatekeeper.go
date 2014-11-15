@@ -44,6 +44,7 @@ func clear_and_close(pin gpio.Pin) {
 // Use structs to pass data around so I can refactor 
 type AppInfo struct {
     aid freefare.DESFireAid
+    aidbytes []byte
     sysid []byte
     acl_read_base []byte
     acl_write_base []byte
@@ -91,6 +92,7 @@ func init_appinfo() {
     }
 
     // Needed for diversification
+    appinfo.aidbytes = helpers.Aid2bytes(appinfo.aid)
     appinfo.sysid, err = hex.DecodeString(appmap["hacklab_acl"].(map[interface{}]interface{})["sysid"].(string))
     if err != nil {
         panic(err)
@@ -137,6 +139,7 @@ func init_appinfo() {
 func recalculate_diversified_keys(realuid []byte) error {
     fmt.Println("(static) appinfo.acl_read_base", appinfo.acl_read_base)
     fmt.Println("(static) appinfo.aid", appinfo.aid)
+    fmt.Println("(static) appinfo.aidbytes", appinfo.aidbytes)
     fmt.Println("(static) appinfo.sysid", appinfo.sysid)
 
     acl_read_bytes, err := keydiversification.AES128(appinfo.acl_read_base, helpers.Aid2bytes(appinfo.aid), realuid, appinfo.sysid)
