@@ -48,6 +48,7 @@ int handle_tag(MifareTag tag, bool *tag_valid)
     MifareDESFireAID aid = mifare_desfire_aid_new(nfclock_aid[2] | (nfclock_aid[1] << 8) | (nfclock_aid[0] << 16));
     //printf("uint32 for aid: 0x%lx\n", (unsigned long)mifare_desfire_aid_get_aid(aid));
     MifareDESFireKey key;
+    char *realuid_str;
 
 RETRY:
     if (err != 0)
@@ -57,10 +58,10 @@ RETRY:
         // TODO: resolve error string
         if (errcnt > errlimit)
         {
-            printf("failed (%s), retry-limit exceeded (%d/%d), skipping tag", errstr, errcnt, errlimit);
+            printf("failed (%s), retry-limit exceeded (%d/%d), skipping tag\n", errstr, errcnt, errlimit);
             goto FAIL;
         }
-        printf("failed (%s), retrying (%d)", errstr, errcnt);
+        printf("failed (%s), retrying (%d)\n", errstr, errcnt);
     }
     if (connected)
     {
@@ -100,6 +101,19 @@ RETRY:
     }
     free(key);
     printf("done\n");
+
+    // mifare_desfire_get_card_uid fills a string as hex-encoded, need to parse that back to bytes for key diversification...
+    printf("Getting real UID, ");
+    err = mifare_desfire_get_card_uid(tag, &realuid_str);
+    if (err < 0)
+    {
+        free(realuid_str);
+        printf("Can't get real UID. ");
+        goto RETRY;
+    }
+    printf("%s\n", realuid_str);
+    // TODO: parse first... or make the keydiversification accept strings (could be more handy)
+    free(realuid_str);
 
 
     // All checks done seems good
