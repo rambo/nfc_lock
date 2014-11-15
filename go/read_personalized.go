@@ -235,6 +235,8 @@ func main() {
             if error != nil {
                 panic(error)
             }
+            fmt.Println("realuid:", hex.EncodeToString(appinfo.aidbytes));
+
             fmt.Println("realuid:", hex.EncodeToString(realuid));
 
             realuid, err := hex.DecodeString(realuid_str)
