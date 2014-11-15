@@ -49,16 +49,8 @@ int main() {
     uint8_t sysid[] = { 0x4E, 0x58, 0x50, 0x20, 0x41, 0x62, 0x75 };
     uint8_t uid[] = { 0x04, 0x78, 0x2E, 0x21, 0x80, 0x1D, 0x80 };
 
-    printf("DEBUG: in main:\n");
-    printf("  sizeof(base_key)=%d\n", sizeof(base_key));
-    printf("  sizeof(aid)=%d\n", sizeof(aid));
-    printf("  sizeof(uid)=%d\n", sizeof(uid));
-    printf("  sizeof(sysid)=%d\n", sizeof(sysid));
-    printf("  sizeof(new_key)=%d\n", sizeof(new_key));
-
-
     int ret;
-    ret = nfclock_diversify_key_aes128(base_key, aid, uid, sysid, new_key);
+    ret = nfclock_diversify_key_aes128(base_key, aid, uid, sizeof(uid), sysid, sizeof(sysid), new_key);
     if (ret != 0)
     {
         printf("nfclock_diversify_key_aes128 returned %d\n", ret);

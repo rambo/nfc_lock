@@ -3,9 +3,6 @@
  */
 #include "keydiversification.h"
 
-// For debugging
-#include <stdio.h>
-
 /**
  * AES128 CMAC based diversification
  *
@@ -16,34 +13,27 @@
  * @param new_key pointer to the array we will overwrite with new key data
  * @return int 0 for no errors, error code otherwise
  */
-int nfclock_diversify_key_aes128(uint8_t base_key[AES_BLOCK_SIZE], uint8_t aid[3], uint8_t *uid, uint8_t *sysid, uint8_t new_key[AES_BLOCK_SIZE])
+int nfclock_diversify_key_aes128(uint8_t base_key[AES_BLOCK_SIZE], uint8_t aid[AID_SIZE], uint8_t *uid, size_t uid_size, uint8_t *sysid, size_t sysid_size, uint8_t new_key[AES_BLOCK_SIZE])
 {
     CMAC_CTX *ctx;
     int ret;
     ctx = CMAC_CTX_new();
-    ret = CMAC_Init(ctx, base_key, sizeof(base_key), EVP_aes_128_cbc(), NULL);
+    ret = CMAC_Init(ctx, base_key, AES_BLOCK_SIZE, EVP_aes_128_cbc(), NULL);
     // TODO: Check the meaning of the return values
     if (ret != 1)
     {
         return ret;
     }
-    
-    printf("DEBUG: in nfclock_diversify_key_aes128:\n");
-    printf("  sizeof(base_key)=%d\n", sizeof(base_key));
-    printf("  sizeof(aid)=%d\n", sizeof(aid));
-    printf("  sizeof(uid)=%d\n", sizeof(uid));
-    printf("  sizeof(sysid)=%d\n", sizeof(sysid));
-    printf("  sizeof(new_key)=%d\n", sizeof(new_key));
-    
 
-    // Create the message
-    uint8_t *data = malloc(1 + sizeof(uid) + sizeof(aid) + sizeof(sysid));
+    // Create the message size is 1 for marker byte, 3 for aid, then the sizes for UID and sysid
+    uint16_t data_size = 1 + 3 + uid_size + sysid_size;
+    uint8_t *data = malloc(data_size);
     data[0] = 0x01;
-    memcpy(&data[1], uid, sizeof(uid));
-    memcpy(&data[1+sizeof(uid)], aid, sizeof(aid));
-    memcpy(&data[1+sizeof(uid)+sizeof(sysid)], sysid, sizeof(sysid));
+    memcpy(&data[1], uid, uid_size);
+    memcpy(&data[1+uid_size], aid, AID_SIZE);
+    memcpy(&data[1+uid_size+AID_SIZE], sysid, sysid_size);
 
-    ret = CMAC_Update(ctx, data, sizeof(data));
+    ret = CMAC_Update(ctx, data, data_size);
     // TODO: Check the meaning of the return values
     if (ret != 1)
     {
