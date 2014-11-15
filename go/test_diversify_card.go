@@ -20,6 +20,7 @@ type AppInfo struct {
     acl_read_base []byte
     acl_write_base []byte
     acl_file_id byte
+    mid_file_id byte
 }
 
 type KeyChain struct {
@@ -62,6 +63,10 @@ func init_appinfo() {
     }
 
     appinfo.acl_file_id, err = helpers.String2byte(appmap["hacklab_acl"].(map[interface{}]interface{})["acl_file_id"].(string))
+    if err != nil {
+        panic(err)
+    }
+    appinfo.mid_file_id, err = helpers.String2byte(appmap["hacklab_acl"].(map[interface{}]interface{})["mid_file_id"].(string))
     if err != nil {
         panic(err)
     }
@@ -163,7 +168,7 @@ func handle_tag(desfiretag *freefare.DESFireTag) {
     }
     fmt.Println("Done")
 
-
+    /*
     aclbytes := make([]byte, 8)
     fmt.Print("Reading ACL data file, ")
     bytesread, err := desfiretag.ReadData(appinfo.acl_file_id, 0, aclbytes)
@@ -181,6 +186,27 @@ func handle_tag(desfiretag *freefare.DESFireTag) {
     }
     fmt.Println("Done")
     fmt.Println("acl:", acl)
+    */
+
+    midbytes := make([]byte, 2)
+    fmt.Println("Reading member-id data file")
+    bytesread, err := desfiretag.ReadData(appinfo.mid_file_id, 0, midbytes)
+    if err != nil {
+        fmt.Println(fmt.Sprintf("ERROR: Failed (%s), skipping tag", err))
+        return
+    }
+    if (bytesread < 2) {
+        //panic(fmt.Sprintf("ReadData read %d bytes, 2 expected", bytesread))
+        fmt.Println(fmt.Sprintf("ReadData read %d bytes, 2 expected", bytesread))
+    }
+    mid64, n := binary.Uvarint(midbytes)
+    if n <= 0 {
+        fmt.Println(fmt.Sprintf("ERROR: binary.Uvarint returned %d, skipping tag", n))
+        return
+    }
+    mid := uint16(mid64)
+    fmt.Println("Done")
+    fmt.Println("mid:", mid)
 
 
 
