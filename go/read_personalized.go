@@ -4,7 +4,7 @@ import (
     "fmt"
     "errors"
     "time"
-    "runtime"
+    //"runtime"
     "encoding/hex"
     "encoding/binary"
     "github.com/fuzxxl/nfc/2.0/nfc"    
@@ -168,7 +168,6 @@ func read_and_parse_acl_file(desfiretag *freefare.DESFireTag) (uint64, error) {
 
 
 func main() {
-
     init_appinfo();
 
     d, err := nfc.Open("");
@@ -177,9 +176,10 @@ func main() {
     }
 
     for {
+        //runtime.GC()
         var tags []freefare.Tag
         for {
-            runtime.GC()
+            //runtime.GC()
             tags, err = freefare.GetTags(d);
             if err != nil {
                 continue

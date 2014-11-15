@@ -452,10 +452,10 @@ func main() {
     fmt.Println("Starting mainloop")
     // mainloop
     for {
+        runtime.GC()
         // Poll for tags
         var tags []freefare.Tag
         for {
-            runtime.GC()
             tags, err = freefare.GetTags(nfcd)
             if err != nil {
                 continue
@@ -493,8 +493,6 @@ func main() {
                     // _ = desfiretag.Disconnect()
             }
         }
-        // Mark for GC
-        tags = nil
 
         if !valid_found {
             fmt.Println("Access DENIED")

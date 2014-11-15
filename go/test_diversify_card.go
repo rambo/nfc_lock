@@ -3,6 +3,7 @@ package main
 import (
     "fmt"
     "encoding/hex"
+    //"runtime"
     "time"
     "github.com/fuzxxl/nfc/2.0/nfc"    
     "github.com/fuzxxl/freefare/0.3/freefare"
@@ -111,6 +112,28 @@ func recalculate_diversified_keys(realuid []byte) error {
     return nil
 }
 
+func handle_tag(desfiretag *freefare.DESFireTag) {
+    uid_str:= desfiretag.UID()
+    
+    fmt.Printf("Found tag %s\n", uid_str)
+
+
+    realuid, err := hex.DecodeString(uid_str)
+    if err != nil {
+        fmt.Println(fmt.Sprintf("ERROR: Failed to parse real UID (%s), skipping tag", err))
+        return
+    }
+    fmt.Println("Got UID: ", hex.EncodeToString(realuid));
+
+    // Calculate the diversified keys
+    err = recalculate_diversified_keys(realuid[:])
+    if err != nil {
+        fmt.Println(fmt.Sprintf("ERROR: Failed to get diversified ACL keys (%s), skipping tag", err))
+        return
+    }
+
+    fmt.Println("Got real ACL read key: ", keychain.acl_read_key)
+}
 
 func main() {
 
@@ -137,33 +160,10 @@ func main() {
     
         for i := 0; i < len(tags); i++ {
             tag := tags[i]
-            uid_str := tag.UID()
-            uid, err := hex.DecodeString(uid_str);
-            if err != nil {
-                panic(err);
-            }
-            fmt.Println(uid_str)
-            fmt.Println(uid)
-    
-            fmt.Printf("Found tag %s\n", uid_str)
-
-
-            realuid, err := hex.DecodeString(uid_str)
-            if err != nil {
-                fmt.Println(fmt.Sprintf("ERROR: Failed to parse real UID (%s), skipping tag", err))
-                continue
-            }
-            fmt.Println("Got UID: ", hex.EncodeToString(realuid));
-        
-            // Calculate the diversified keys
-            err = recalculate_diversified_keys(realuid[:])
-            if err != nil {
-                fmt.Println(fmt.Sprintf("ERROR: Failed to get diversified ACL keys (%s), skipping tag", err))
-                continue
-            }
-
-            fmt.Println("Got real ACL read key: ", keychain.acl_read_key)
+            desfiretag := tag.(freefare.DESFireTag)
+            handle_tag(&desfiretag)
         }
+        //runtime.GC()
     }
 
 }    
