@@ -2,12 +2,16 @@ CC         = gcc
 CFLAGS     = -g -Wall -std=gnu99
 LDFLAGS    =
 
-PROGRAM = mifare-desfire-access
-PROGRAM_FILES = mifare-desfire-access.c
+#PROGRAM = mifare-desfire-access
+#PROGRAM_FILES = mifare-desfire-access.c
 
-CFLAGS	+= -g $(shell pkg-config --cflags libfreefare)
+PROGRAM = cmac_example
+PROGRAM_FILES = cmac_example.c
+
+
+CFLAGS	+= -g $(shell pkg-config --cflags libfreefare openssl)
 LDFLAGS	+= -g
-LIBS 	+= $(shell pkg-config --libs libfreefare) 
+LIBS 	+= $(shell pkg-config --libs libfreefare openssl) 
 
 all: $(PROGRAM)
 
