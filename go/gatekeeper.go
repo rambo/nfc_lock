@@ -31,6 +31,7 @@ func heartbeat() {
 /*
 func pulse_gpio(pin gpio.Pin, ms int) {
     pin.Set()
+    // TODO: switch to time.Timer so we can reset the timer when a new call comes in
     time.Sleep(time.Duration(ms) * time.Millisecond)
     pin.Clear()
 }
@@ -137,14 +138,22 @@ func init_appinfo() {
 }
 
 func recalculate_diversified_keys(realuid []byte) error {
-    acl_read_bytes, err := keydiversification.AES128(appinfo.acl_read_base, appinfo.aidbytes, realuid, appinfo.sysid)
+    /*
+    fmt.Println("(static) appinfo.acl_read_base", appinfo.acl_read_base)
+    fmt.Println("(static) appinfo.aid", appinfo.aid)
+    fmt.Println("(static) appinfo.aidbytes", appinfo.aidbytes)
+    fmt.Println("(static) appinfo.sysid", appinfo.sysid)
+    */
+    acl_read_bytes, err := keydiversification.AES128(appinfo.acl_read_base, helpers.Aid2bytes(appinfo.aid), realuid, appinfo.sysid)
     if err != nil {
         return err
     }
-    acl_write_bytes, err := keydiversification.AES128(appinfo.acl_write_base, appinfo.aidbytes, realuid, appinfo.sysid)
+    //fmt.Println("(new) acl_read_bytes:", acl_read_bytes)
+    acl_write_bytes, err := keydiversification.AES128(appinfo.acl_write_base, helpers.Aid2bytes(appinfo.aid), realuid, appinfo.sysid)
     if err != nil {
         return err
     }
+    //fmt.Println("(new) acl_write_bytes: ",acl_write_bytes)
     keychain.acl_read_key = helpers.Bytes2aeskey(acl_read_bytes)
     keychain.acl_write_key = helpers.Bytes2aeskey(acl_write_bytes)
     return nil
@@ -163,8 +172,8 @@ func update_acl_file(desfiretag *freefare.DESFireTag, newdata *[]byte) error {
     if err != nil {
         return err
     }
-    if (byteswritten < 8) {
-        fmt.Println(fmt.Sprintf("WARNING: WriteData wrote %d bytes, 8 expected", byteswritten))
+    if (byteswritten < 4) {
+        fmt.Println(fmt.Sprintf("WARNING: WriteData wrote %d bytes, 4 expected", byteswritten))
     }
     fmt.Println("Done")
     return nil
@@ -194,26 +203,26 @@ func check_revoked(db *sql.DB, realuid_str string) (bool, error) {
     return revoked_found, nil
 }
 
-func read_and_parse_acl_file(desfiretag *freefare.DESFireTag) (uint64, error) {
+func read_and_parse_acl_file(desfiretag *freefare.DESFireTag) (uint32, error) {
 
-    aclbytes := make([]byte, 8)
+    aclbytes := make([]byte, 4)
     fmt.Print("Reading ACL data file, ")
     bytesread, err := desfiretag.ReadData(appinfo.acl_file_id, 0, aclbytes)
     if err != nil {
         return 0, err
     }
-    if (bytesread < 8) {
-        fmt.Println(fmt.Sprintf("WARNING: ReadData read %d bytes, 8 expected", bytesread))
+    if (bytesread < 4) {
+        fmt.Println(fmt.Sprintf("WARNING: ReadData read %d bytes, 4 expected", bytesread))
     }
-    acl, n := binary.Uvarint(aclbytes)
+    acl64, n := binary.Uvarint(aclbytes)
     if n <= 0 {
         return 0, errors.New(fmt.Sprintf("ERROR: binary.Uvarint returned %d, skipping tag", n))
     }
     fmt.Println("Done")
-    return acl, nil
+    return uint32(acl64), nil
 }
 
-func get_db_acl(db *sql.DB, realuid_str string) (uint64, error) {
+func get_db_acl(db *sql.DB, realuid_str string) (uint32, error) {
     stmt, err := db.Prepare("SELECT rowid,acl FROM keys where uid=?")
     if err != nil {
         return 0, err
@@ -228,24 +237,24 @@ func get_db_acl(db *sql.DB, realuid_str string) (uint64, error) {
         var rowid int64
         var acl int64
         rows.Scan(&rowid, &acl)
-        return uint64(acl), nil
+        return uint32(acl), nil
     }
     return 0, errors.New(fmt.Sprintf("UID not found"))
 }
 
-func check_tag_channel(desfiretag *freefare.DESFireTag, db *sql.DB, required_acl uint64, ch chan TagResult) {
+func check_tag_channel(desfiretag *freefare.DESFireTag, db *sql.DB, required_acl uint32, ch chan TagResult) {
     result, err := check_tag(desfiretag, db, required_acl)
     ch <- TagResult{result, err}
     close(ch)
 }
 
-func check_tag(desfiretag *freefare.DESFireTag, db *sql.DB, required_acl uint64) (bool, error) {
+func check_tag(desfiretag *freefare.DESFireTag, db *sql.DB, required_acl uint32) (bool, error) {
     const errlimit = 3
     var err error = nil
     var realuid_str string
     var realuid []byte
-    acl := uint64(0)
-    db_acl := uint64(0)
+    acl := uint32(0)
+    db_acl := uint32(0)
     revoked_found := false
     errcnt := 0
     connected := false
@@ -316,7 +325,7 @@ RETRY:
     }
     if revoked_found {
         // Null the ACL file on card
-        nullaclbytes := make([]byte, 8)
+        nullaclbytes := make([]byte, 4)
         // Just go to fail even if this write fails
         _ = update_acl_file(desfiretag, &nullaclbytes)
         goto FAIL
@@ -349,8 +358,8 @@ RETRY:
         fmt.Println(fmt.Sprintf("NOTICE: card ACL (%x) does not match DB (%x), ", acl, db_acl))
 
         // Update the ACL file on card
-        newaclbytes := make([]byte, 8)
-        n := binary.PutUvarint(newaclbytes, db_acl)
+        newaclbytes := make([]byte, 4)
+        n := binary.PutUvarint(newaclbytes, uint64(db_acl))
         if (n < 0) {
             fmt.Println(fmt.Sprintf("binary.PutUvarint returned %d, skipping tag", n))
             goto FAIL
@@ -390,7 +399,7 @@ func main() {
     */
 
     // TODO: configure this somewhere
-    required_acl := uint64(1)
+    required_acl := uint32(1)
 
     init_appinfo()
 

@@ -10,8 +10,13 @@ Ubuntu 14.04 has libnfc but no libfreefare, use [this PPA](https://launchpad.net
     sudo apt-add-repository ppa:christopher-hoskin/ppa
     sudo apt-get update
     sudo apt-get install libnfc5 libnfc-bin libnfc-pn53x-examples libnfc-examples
-    sudo apt-get install libfreefare0 libfreefare-bin 
-    sudo apt-get install golang mercurial git-core
+    sudo apt-get install libfreefare0 libfreefare-bin
+
+### For compiling
+
+For the C programs and possibly the Go libraries.
+
+    sudo apt-get install libfreefare-dev libnfc-dev libssl-dev
 
 ### RasPi
 
@@ -37,11 +42,10 @@ Install library dependencies
     go get github.com/jacobsa/crypto/cmac
     go get github.com/mattn/go-sqlite3
     go get github.com/davecheney/gpio
-    go get github.com/davecheney/gpio/rpi
 
 ### RasPi
 
-See https://xivilization.net/~marek/blog/2014/06/10/go-1-dot-2-for-raspberry-pi/ for Go 1.3 (1.0 will not work)
+See https://xivilization.net/~marek/blog/2014/07/05/go-1-dot-3-for-raspberry-pi/ for Go 1.3 (1.0 will not work)
 
     sudo apt-get install apt-transport-https
 
@@ -68,6 +72,3 @@ Prepare some tags and insert their (real) UIDs to the grants and revokes
     INSERT INTO keys VALUES ("04212f69b21e80", 1);
 
 In reality you will generate this file based on your person registry (keep track of validity times etc there, then regenerate the keydb for the door).
-
-NOTE: While we use **unsigned** 64bit integers for ACL flags SQLite integers are always signed.
-
