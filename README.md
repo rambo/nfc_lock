@@ -67,6 +67,3 @@ Prepare some tags and insert their (real) UIDs to the grants and revokes
     INSERT INTO keys VALUES ("04212f69b21e80", 1);
 
 In reality you will generate this file based on your person registry (keep track of validity times etc there, then regenerate the keydb for the door).
-
-NOTE: While we use **unsigned** 64bit integers for ACL flags SQLite integers are always signed.
-
