@@ -171,7 +171,6 @@ func update_acl_file(desfiretag *freefare.DESFireTag, newdata *[]byte) error {
 }
 
 func check_revoked(db *sql.DB, realuid_str string) (bool, error) {
-    return false,nil
     revoked_found := false
     stmt, err := db.Prepare("SELECT rowid FROM revoked where uid=?")
     if err != nil {
@@ -196,12 +195,6 @@ func check_revoked(db *sql.DB, realuid_str string) (bool, error) {
 }
 
 func read_and_parse_acl_file(desfiretag *freefare.DESFireTag) (uint64, error) {
-    fmt.Print("Re-auth with ACL read key, ")
-    err := desfiretag.Authenticate(keychain.acl_read_key_id,*keychain.acl_read_key)
-    if err != nil {
-        return 0, err
-    }
-    fmt.Println("Done")
 
     aclbytes := make([]byte, 8)
     fmt.Print("Reading ACL data file, ")
@@ -221,7 +214,6 @@ func read_and_parse_acl_file(desfiretag *freefare.DESFireTag) (uint64, error) {
 }
 
 func get_db_acl(db *sql.DB, realuid_str string) (uint64, error) {
-    return 1,nil
     stmt, err := db.Prepare("SELECT rowid,acl FROM keys where uid=?")
     if err != nil {
         return 0, err
@@ -329,6 +321,13 @@ RETRY:
         _ = update_acl_file(desfiretag, &nullaclbytes)
         goto FAIL
     }
+
+    fmt.Print("Re-auth with ACL read key, ")
+    err = desfiretag.Authenticate(keychain.acl_read_key_id,*keychain.acl_read_key)
+    if err != nil {
+        goto RETRY
+    }
+    fmt.Println("Done")
 
     acl, err = read_and_parse_acl_file(desfiretag)
     if err != nil {
