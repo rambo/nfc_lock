@@ -148,14 +148,14 @@ func read_and_parse_acl_file(desfiretag *freefare.DESFireTag) (uint64, error) {
     }
     fmt.Println("Done")
 
-    aclbytes := make([]byte, 8)
+    aclbytes := make([]byte, 4)
     fmt.Print("Reading ACL data file, ")
     bytesread, err := desfiretag.ReadData(appinfo.acl_file_id, 0, aclbytes)
     if err != nil {
         return 0, err
     }
-    if (bytesread < 8) {
-        fmt.Println(fmt.Sprintf("WARNING: ReadData read %d bytes, 8 expected", bytesread))
+    if (bytesread < 4) {
+        fmt.Println(fmt.Sprintf("WARNING: ReadData read %d bytes, 4 expected", bytesread))
     }
     acl, n := binary.Uvarint(aclbytes)
     if n <= 0 {
