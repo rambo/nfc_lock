@@ -113,6 +113,8 @@ func recalculate_diversified_keys(realuid []byte) error {
 }
 
 func handle_tag(desfiretag *freefare.DESFireTag) {
+    desfiretag.Connect()
+
     uid_str:= desfiretag.UID()
     
     fmt.Printf("Found tag %s\n", uid_str)
@@ -133,6 +135,8 @@ func handle_tag(desfiretag *freefare.DESFireTag) {
     }
 
     fmt.Println("Got real ACL read key: ", keychain.acl_read_key)
+
+    desfiretag.Disconnect()
 }
 
 func main() {
