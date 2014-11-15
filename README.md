@@ -41,7 +41,7 @@ Install library dependencies
 
 ### RasPi
 
-See https://xivilization.net/~marek/blog/2014/06/10/go-1-dot-2-for-raspberry-pi/ for Go 1.2 (1.0 will not work)
+See https://xivilization.net/~marek/blog/2014/06/10/go-1-dot-2-for-raspberry-pi/ for Go 1.3 (1.0 will not work)
 
     sudo apt-get install apt-transport-https
 

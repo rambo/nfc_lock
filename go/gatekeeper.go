@@ -15,9 +15,10 @@ import (
     "github.com/fuzxxl/nfc/2.0/nfc"    
     "github.com/fuzxxl/freefare/0.3/freefare"
     _ "github.com/mattn/go-sqlite3"
-    "github.com/davecheney/gpio"
+    //"github.com/davecheney/gpio"
     "./keydiversification"
     "./helpers"
+    // "github.com/davecheney/profile"
 )
 
 func heartbeat() {
@@ -27,6 +28,7 @@ func heartbeat() {
     }
 }
 
+/*
 func pulse_gpio(pin gpio.Pin, ms int) {
     pin.Set()
     time.Sleep(time.Duration(ms) * time.Millisecond)
@@ -37,6 +39,7 @@ func clear_and_close(pin gpio.Pin) {
     pin.Clear()
     pin.Close()
 }
+*/
 
 // Use structs to pass data around so I can refactor 
 type AppInfo struct {
@@ -134,11 +137,11 @@ func init_appinfo() {
 }
 
 func recalculate_diversified_keys(realuid []byte) error {
-    acl_read_bytes, err := keydiversification.AES128(appinfo.acl_read_base[:], appinfo.aidbytes[:], realuid[:], appinfo.sysid[:])
+    acl_read_bytes, err := keydiversification.AES128(appinfo.acl_read_base, appinfo.aidbytes, realuid, appinfo.sysid)
     if err != nil {
         return err
     }
-    acl_write_bytes, err := keydiversification.AES128(appinfo.acl_write_base[:], appinfo.aidbytes[:], realuid[:], appinfo.sysid[:])
+    acl_write_bytes, err := keydiversification.AES128(appinfo.acl_write_base, appinfo.aidbytes, realuid, appinfo.sysid)
     if err != nil {
         return err
     }
@@ -167,7 +170,7 @@ func update_acl_file(desfiretag *freefare.DESFireTag, newdata *[]byte) error {
     return nil
 }
 
-func check_revoked(desfiretag *freefare.DESFireTag, db *sql.DB, realuid_str string) (bool, error) {
+func check_revoked(db *sql.DB, realuid_str string) (bool, error) {
     revoked_found := false
     stmt, err := db.Prepare("SELECT rowid FROM revoked where uid=?")
     if err != nil {
@@ -179,7 +182,7 @@ func check_revoked(desfiretag *freefare.DESFireTag, db *sql.DB, realuid_str stri
         return true, err
     }
     defer rows.Close()    
-    for rows.Next() {    
+    for rows.Next() {
         revoked_found = true
         var rowid int64
         rows.Scan(&rowid)     // Assigns 1st column to rowid, the rest to row
@@ -187,23 +190,11 @@ func check_revoked(desfiretag *freefare.DESFireTag, db *sql.DB, realuid_str stri
 
         // TODO: Publish a ZMQ message or something
 
-        // Null the ACL file on card
-        nullaclbytes := make([]byte, 8)
-        err := update_acl_file(desfiretag, &nullaclbytes)
-        if err != nil {
-            return revoked_found, err
-        }
     }
     return revoked_found, nil
 }
 
 func read_and_parse_acl_file(desfiretag *freefare.DESFireTag) (uint64, error) {
-    fmt.Print("Re-auth with ACL read key, ")
-    err := desfiretag.Authenticate(keychain.acl_read_key_id,*keychain.acl_read_key)
-    if err != nil {
-        return 0, err
-    }
-    fmt.Println("Done")
 
     aclbytes := make([]byte, 8)
     fmt.Print("Reading ACL data file, ")
@@ -222,7 +213,7 @@ func read_and_parse_acl_file(desfiretag *freefare.DESFireTag) (uint64, error) {
     return acl, nil
 }
 
-func get_db_acl(desfiretag *freefare.DESFireTag, db *sql.DB, realuid_str string) (uint64, error) {
+func get_db_acl(db *sql.DB, realuid_str string) (uint64, error) {
     stmt, err := db.Prepare("SELECT rowid,acl FROM keys where uid=?")
     if err != nil {
         return 0, err
@@ -311,21 +302,32 @@ RETRY:
     fmt.Println("Got real UID:", hex.EncodeToString(realuid));
 
     // Calculate the diversified keys
-    err = recalculate_diversified_keys(realuid[:])
+    err = recalculate_diversified_keys(realuid)
     if err != nil {
         fmt.Println(fmt.Sprintf("ERROR: Failed to get diversified ACL keys (%s), skipping tag", err))
         goto FAIL
     }
 
     // Check for revoked key
-    revoked_found, err = check_revoked(desfiretag, db, realuid_str)
+    revoked_found, err = check_revoked(db, realuid_str)
     if err != nil {
         fmt.Println(fmt.Sprintf("check_revoked returned err (%s)", err))
         revoked_found = true
     }
     if revoked_found {
+        // Null the ACL file on card
+        nullaclbytes := make([]byte, 8)
+        // Just go to fail even if this write fails
+        _ = update_acl_file(desfiretag, &nullaclbytes)
         goto FAIL
     }
+
+    fmt.Print("Re-auth with ACL read key, ")
+    err = desfiretag.Authenticate(keychain.acl_read_key_id,*keychain.acl_read_key)
+    if err != nil {
+        goto RETRY
+    }
+    fmt.Println("Done")
 
     acl, err = read_and_parse_acl_file(desfiretag)
     if err != nil {
@@ -334,7 +336,7 @@ RETRY:
     //fmt.Println("DEBUG: acl:", acl)
 
     // Get (possibly updated) ACL from DB, if returns error then UID is not known
-    db_acl, err = get_db_acl(desfiretag, db, realuid_str)
+    db_acl, err = get_db_acl(db, realuid_str)
     if err != nil {
         // No match
         fmt.Println(fmt.Sprintf("WARNING: key %s, not found in DB", realuid_str))
@@ -376,15 +378,28 @@ FAIL:
 }
 
 func main() {
+    /*
+    cfg := profile.Config {
+            MemProfile: true,
+            NoShutdownHook: true, // do not hook SIGINT
+    }
+    // p.Stop() must be called before the program exits to  
+    // ensure profiling information is written to disk.
+    p := profile.Start(&cfg)
+    defer p.Stop()
+    */
+
     // TODO: configure this somewhere
     required_acl := uint64(1)
 
     init_appinfo()
 
+    /*
     gpiomap, err := helpers.LoadYAMLFile("gpio.yaml")
     if err != nil {
         panic(err)
     }
+    */
 
     db, err := sql.Open("sqlite3", "./keys.db")
     if err != nil {
@@ -402,22 +417,21 @@ func main() {
     // Start heartbeat goroutine
     //go heartbeat()
 
+    /*
     // Get open GPIO pins for our outputs
     green_led, err := gpio.OpenPin(gpiomap["green_led"].(map[interface{}]interface{})["pin"].(int), gpio.ModeOutput)
     if err != nil {
-        fmt.Printf("err opening green_led! %s\n", err)
-        return
+        panic(err)
     }
     red_led, err := gpio.OpenPin(gpiomap["red_led"].(map[interface{}]interface{})["pin"].(int), gpio.ModeOutput)
     if err != nil {
-        fmt.Printf("err opening green_led! %s\n", err)
-        return
+        panic(err)
     }
     relay, err := gpio.OpenPin(gpiomap["relay"].(map[interface{}]interface{})["pin"].(int), gpio.ModeOutput)
     if err != nil {
-        fmt.Printf("err opening relay! %s\n", err)
-        return
+        panic(err)
     }
+    */
     // turn the leds off on exit
     /*
     exit_ch := make(chan os.Signal, 1)
@@ -437,13 +451,13 @@ func main() {
     fmt.Println("Starting mainloop")
     // mainloop
     for {
+        runtime.GC()
         // Poll for tags
         var tags []freefare.Tag
         for {
-            tags, err = freefare.GetTags(nfcd);
+            tags, err = freefare.GetTags(nfcd)
             if err != nil {
-                // TODO: Probably should not panic here
-                panic(err)
+                continue
             }
             if len(tags) > 0 {
                 break
@@ -468,33 +482,30 @@ func main() {
                     if !ok {
                         // Channel closed
                     } else {
-                        /**
-                         * Probably not needed
-                        if res.err != nil {
-                        }
-                         */
                         if res.is_valid {
                             valid_found = true
                         }
                     }
                 case <-time.After(time.Second * 1):
                     fmt.Println("WARNING: Timeout while checking tag")
-                    _ = desfiretag.Disconnect()
+                    // TODO: Do we even need this, probably not...
+                    // _ = desfiretag.Disconnect()
             }
         }
-        // Mark for GC
-        tags = nil
 
         if !valid_found {
             fmt.Println("Access DENIED")
-            go pulse_gpio(red_led, gpiomap["red_led"].(map[interface{}]interface{})["time"].(int))
+            //go pulse_gpio(red_led, gpiomap["red_led"].(map[interface{}]interface{})["time"].(int))
         } else {
+            fmt.Println("Blinkety-blink")
+            /*
             go pulse_gpio(green_led, gpiomap["green_led"].(map[interface{}]interface{})["time"].(int))
             go pulse_gpio(relay, gpiomap["relay"].(map[interface{}]interface{})["time"].(int))
+            */
         }
 
         // Run GC at this time
-        runtime.GC()
+        //runtime.GC()
         // Wait a moment before continuing with fast polling
         time.Sleep(500 * time.Millisecond)
 
