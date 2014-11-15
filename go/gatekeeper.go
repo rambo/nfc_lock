@@ -453,6 +453,13 @@ func main() {
     for {
         runtime.GC()
         // Poll for tags
+        nfcd.Close()
+        nfcd, err := nfc.Open("");
+        if err != nil {
+            fmt.Println(fmt.Sprintf("Error %s when Re-opening NFC interface", err))
+            time.Sleep(100 * time.Millisecond)
+            continue
+        }
         var tags []freefare.Tag
         for {
             tags, err = freefare.GetTags(nfcd)
