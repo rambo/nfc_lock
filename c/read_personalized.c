@@ -60,6 +60,7 @@ int main(int argc, char *argv[])
     }
     else
     {
+        // TODO: This leaks memory but I have no idea what to do about it
         nfc_connstring devices[8];
         size_t device_count;
         device_count = nfc_list_devices(nfc_ctx, devices, 8);
