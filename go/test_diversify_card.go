@@ -5,7 +5,7 @@ import (
     "encoding/hex"
     //"runtime"
     "time"
-    "encoding/binary"
+    //"encoding/binary"
     "github.com/fuzxxl/nfc/2.0/nfc"    
     "github.com/fuzxxl/freefare/0.3/freefare"
     "./keydiversification"
@@ -168,7 +168,6 @@ func handle_tag(desfiretag *freefare.DESFireTag) {
     }
     fmt.Println("Done")
 
-    /*
     aclbytes := make([]byte, 8)
     fmt.Print("Reading ACL data file, ")
     bytesread, err := desfiretag.ReadData(appinfo.acl_file_id, 0, aclbytes)
@@ -179,6 +178,9 @@ func handle_tag(desfiretag *freefare.DESFireTag) {
     if (bytesread < 8) {
         fmt.Println(fmt.Sprintf("WARNING: ReadData read %d bytes, 8 expected", bytesread))
     }
+    fmt.Println("Done")
+    fmt.Println("aclbytes:", aclbytes)
+    /*
     acl, n := binary.Uvarint(aclbytes)
     if n <= 0 {
         fmt.Println(fmt.Sprintf("ERROR: binary.Uvarint returned %d, skipping tag", n))
@@ -188,6 +190,7 @@ func handle_tag(desfiretag *freefare.DESFireTag) {
     fmt.Println("acl:", acl)
     */
 
+    /*
     midbytes := make([]byte, 2)
     fmt.Println("Reading member-id data file")
     bytesread, err := desfiretag.ReadData(appinfo.mid_file_id, 0, midbytes)
@@ -207,6 +210,7 @@ func handle_tag(desfiretag *freefare.DESFireTag) {
     mid := uint16(mid64)
     fmt.Println("Done")
     fmt.Println("mid:", mid)
+    */
 
 
 
