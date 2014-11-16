@@ -47,10 +47,8 @@ int handle_tag(MifareTag tag, bool *tag_valid)
     uint8_t diversified_key_data[16];
     uint8_t aclbytes[4];
     uint32_t acl;
-    /*
-    uint8_t midbytes[4];
+    uint8_t midbytes[2];
     uint16_t mid;
-    */
 
 RETRY:
     if (err != 0)
@@ -152,6 +150,18 @@ RETRY:
     }
     acl = aclbytes[0] | (aclbytes[1] << 8) | (aclbytes[2] << 16) | (aclbytes[3] << 24);
     printf("done, got 0x%lx \n", (unsigned long)acl);
+
+
+    printf("Reading member-if file, ");
+    err = mifare_desfire_read_data (tag, nfclock_mid_file_id, 0, sizeof(midbytes), midbytes);
+    if (err < 0)
+    {
+        printf("got %d as bytes read", err);
+        goto RETRY;
+    }
+    mid = midbytes[0] | (midbytes[1] << 8);
+    printf("done, got %d \n", mid);
+
 
     // All checks done seems good
     if (realuid_str)
