@@ -331,9 +331,12 @@ int main(int argc, char *argv[])
             if (err == ETIMEDOUT)
             {
                     printf("TIMED OUT\n");
+                    pthread_cancel(tid);
+                    pthread_join(tid, NULL);
                     pthread_mutex_unlock(&tag_processing);
                     continue;
             }
+            pthread_join(tid, NULL);
             pthread_mutex_unlock(&tag_processing);
             if (err)
             {

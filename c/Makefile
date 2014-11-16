@@ -11,14 +11,14 @@ LDFLAGS    =
 #PROGRAM = keydiversification_test
 #PROGRAM_FILES = keydiversification.c keydiversification_test.c
 
-#PROGRAM = read_personalized
-#PROGRAM_FILES = keydiversification.c read_personalized.c
-#CFLAGS += -pthread
-
-
-PROGRAM = pthread_example
-PROGRAM_FILES = pthread_example.c
+PROGRAM = read_personalized
+PROGRAM_FILES = keydiversification.c read_personalized.c
 CFLAGS += -pthread
+
+
+#PROGRAM = pthread_example
+#PROGRAM_FILES = pthread_example.c
+#CFLAGS += -pthread
 
 
 CFLAGS	+= -g $(shell pkg-config --cflags libfreefare openssl)
