@@ -275,7 +275,7 @@ int main(int argc, char *argv[])
             free (tag_uid_str);
 
             bool tag_valid = false;
-            // TODO: Timeout this so the program does not hang if tag leaves at inopportune time
+            // TODO: Timeout this so the program does not hang if tag leaves at inopportune time, try http://stackoverflow.com/questions/7738546/how-to-set-a-timeout-for-a-function-in-c
             tagerror = handle_tag(tags[i], &tag_valid);
             if (tagerror != 0)
             {
