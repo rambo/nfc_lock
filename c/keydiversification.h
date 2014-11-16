@@ -21,4 +21,4 @@
  * @param new_key pointer to the array we will overwrite with new key data
  * @return int 0 for no errors, error code otherwise
  */
-int nfclock_diversify_key_aes128(uint8_t base_key[AES_BLOCK_SIZE], uint8_t aid[AID_SIZE], uint8_t *uid, size_t uid_size, uint8_t *sysid, size_t sysid_size, uint8_t new_key[AES_BLOCK_SIZE]);
+int nfclock_diversify_key_aes128(uint8_t base_key[AES_BLOCK_SIZE], uint8_t aid[AID_SIZE], char *uid_str, uint8_t *sysid, size_t sysid_size, uint8_t new_key[AES_BLOCK_SIZE]);
