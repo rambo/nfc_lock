@@ -47,13 +47,18 @@ int do_or_timeout(struct timespec *max_wait)
         err = pthread_cond_timedwait(&done, &calculating, &abs_time);
 
         if (err == ETIMEDOUT)
-                fprintf(stderr, "%s: calculation timed out\n", __func__);
+        {
+            fprintf(stderr, "%s: calculation timed out\n", __func__);
+            pthread_cancel(tid);
+            pthread_join(tid, NULL);
+        }
 
         if (!err)
-                pthread_mutex_unlock(&calculating);
+        {
+            pthread_mutex_unlock(&calculating);
+            pthread_join(tid, NULL);
+        }
 
-        pthread_cancel(tid);
-        pthread_join(tid, NULL);
 
         return err;
 }
