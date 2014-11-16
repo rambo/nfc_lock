@@ -45,14 +45,20 @@ int handle_tag(MifareTag tag, bool *tag_valid)
     char errstr[] = "";
     uint8_t errcnt = 0;
     bool connected = false;
-    MifareDESFireAID aid = mifare_desfire_aid_new(nfclock_aid[2] | (nfclock_aid[1] << 8) | (nfclock_aid[0] << 16));
+    MifareDESFireAID aid = mifare_desfire_aid_new(nfclock_aid[0] | (nfclock_aid[1] << 8) | (nfclock_aid[2] << 16));
     //printf("uint32 for aid: 0x%lx\n", (unsigned long)mifare_desfire_aid_get_aid(aid));
     MifareDESFireKey key;
-    char *realuid_str;
+    char *realuid_str = NULL;
+    uint8_t diversified_key_data[16];
 
 RETRY:
     if (err != 0)
     {
+        if (realuid_str)
+        {
+            free(realuid_str);
+            realuid_str = NULL;
+        }
         // TODO: Retry only on RF-errors
         ++errcnt;
         // TODO: resolve error string
@@ -84,11 +90,13 @@ RETRY:
     if (err < 0)
     {
         free(aid);
+        aid = NULL;
         printf("Can't select application.");
         goto RETRY;
     }
     printf("done\n");
     free(aid);
+    aid = NULL;
 
     printf("Authenticating, ");
     key = mifare_desfire_aes_key_new_with_version((uint8_t*)&nfclock_uid_key, 0x0);
@@ -96,31 +104,60 @@ RETRY:
     if (err < 0)
     {
         free(key);
+        key = NULL;
         printf("Can't Authenticate. ");
         goto RETRY;
     }
     free(key);
+    key = NULL;
     printf("done\n");
 
-    // mifare_desfire_get_card_uid fills a string as hex-encoded, need to parse that back to bytes for key diversification...
     printf("Getting real UID, ");
     err = mifare_desfire_get_card_uid(tag, &realuid_str);
     if (err < 0)
     {
-        free(realuid_str);
         printf("Can't get real UID. ");
         goto RETRY;
     }
     printf("%s\n", realuid_str);
-    // TODO: parse first... or make the keydiversification accept strings (could be more handy)
-    free(realuid_str);
+
+    err = nfclock_diversify_key_aes128((uint8_t *)nfclock_acl_read_key_base, (uint8_t*)nfclock_aid, realuid_str, (uint8_t*)nfclock_sysid, sizeof(nfclock_sysid), diversified_key_data);
+    if (err != 0)
+    {
+        printf("Can't calculate diversified key, failing\n");
+        goto FAIL;
+    }
+
+    printf("Re-auth with ACL read key, ");
+    key = mifare_desfire_aes_key_new_with_version((uint8_t*)diversified_key_data, 0x0);
+    err = mifare_desfire_authenticate(tag, nfclock_acl_read_keyid, key);
+    if (err < 0)
+    {
+        free(key);
+        key = NULL;
+        printf("Can't Authenticate. ");
+        goto RETRY;
+    }
+    free(key);
+    key = NULL;
+    printf("done\n");
 
 
     // All checks done seems good
+    if (realuid_str)
+    {
+        free(realuid_str);
+        realuid_str = NULL;
+    }
     mifare_desfire_disconnect(tag);
     *tag_valid = true;
     return 0;
 FAIL:
+    if (realuid_str)
+    {
+        free(realuid_str);
+        realuid_str = NULL;
+    }
     if (connected)
     {
         mifare_desfire_disconnect(tag);
