@@ -10,6 +10,8 @@
 #include <string.h> // memcpy
 #include <stdlib.h> //realloc
 
+#include <pthread.h>
+
 #include <nfc/nfc.h>
 #include <freefare.h>
 
@@ -185,6 +187,20 @@ FAIL:
     *tag_valid = false;
     return err;
 }
+
+struct thread_data {
+   MifareTag tag;
+   bool *tag_valid;
+   int  err;
+};
+
+
+void *handle_tag_pthread(void *threadarg)
+{
+    struct thread_data *my_data;
+    my_data = (struct thread_data *) threadarg;
+}
+
 
 int main(int argc, char *argv[])
 {
