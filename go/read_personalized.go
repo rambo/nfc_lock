@@ -238,6 +238,9 @@ func main() {
             fmt.Println("aidbytes:", hex.EncodeToString(appinfo.aidbytes));
             fmt.Println(fmt.Sprintf("aid: 0x%x", appinfo.aid.Aid()));
 
+            fmt.Println("sysid (hex):", hex.EncodeToString(appinfo.sysid));
+            fmt.Println("sysid:", appinfo.sysid);
+
             fmt.Println("realuid:", hex.EncodeToString(realuid));
 
             realuid, err := hex.DecodeString(realuid_str)
