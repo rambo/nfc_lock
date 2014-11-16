@@ -4,7 +4,7 @@
 #include "keydiversification.h"
 
 // Declare the hex conversion function (from http://stackoverflow.com/questions/18267803/how-to-correctly-convert-a-hex-string-to-byte-array-in-c)
-static int hex2data(uint8_t *data, const char *hexstring, size_t len);
+static int nfclock_hex2data(uint8_t *data, const char *hexstring, size_t len);
 
 /**
  * AES128 CMAC based diversification
@@ -29,7 +29,7 @@ int nfclock_diversify_key_aes128(uint8_t base_key[AES_BLOCK_SIZE], uint8_t aid[A
     }
     size_t uid_size = strlen(uid_str)/2;
     uint8_t *uid = malloc(uid_size);
-    ret = hex2data(uid, uid_str, uid_size);
+    ret = nfclock_hex2data(uid, uid_str, uid_size);
     if (ret != 0)
     {
         free(uid);
@@ -71,7 +71,7 @@ int nfclock_diversify_key_aes128(uint8_t base_key[AES_BLOCK_SIZE], uint8_t aid[A
 //returns 0 on success, -1 on error
 //data is a buffer of at least len bytes
 //hexstring is upper or lower case hexadecimal, NOT prepended with "0x"
-static int hex2data(uint8_t *data, const char *hexstring, size_t len)
+static int nfclock_hex2data(uint8_t *data, const char *hexstring, size_t len)
 {
     const char *pos = hexstring;
     char *endptr;
