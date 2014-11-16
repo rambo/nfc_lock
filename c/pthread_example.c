@@ -52,6 +52,9 @@ int do_or_timeout(struct timespec *max_wait)
         if (!err)
                 pthread_mutex_unlock(&calculating);
 
+        pthread_cancel(tid);
+        pthread_join(tid, NULL);
+
         return err;
 }
 
