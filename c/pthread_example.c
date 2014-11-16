@@ -22,7 +22,7 @@ void *expensive_call(void *data)
 
         /* wake up the caller if we've completed in time */
         pthread_cond_signal(&done);
-        return NULL;
+        pthread_exit(NULL);
 }
 
 /* note: this is not thread safe as it uses a global condition/mutex */
