@@ -5,8 +5,14 @@ LDFLAGS    =
 #PROGRAM = mifare-desfire-access
 #PROGRAM_FILES = mifare-desfire-access.c
 
-PROGRAM = cmac_example
-PROGRAM_FILES = cmac_example.c
+#PROGRAM = cmac_example
+#PROGRAM_FILES = cmac_example.c
+
+#PROGRAM = keydiversification_test
+#PROGRAM_FILES = keydiversification.c keydiversification_test.c
+
+PROGRAM = read_personalized
+PROGRAM_FILES = keydiversification.c read_personalized.c
 
 
 CFLAGS	+= -g $(shell pkg-config --cflags libfreefare openssl)

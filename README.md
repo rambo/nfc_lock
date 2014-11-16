@@ -16,7 +16,7 @@ Ubuntu 14.04 has libnfc but no libfreefare, use [this PPA](https://launchpad.net
 
 For the C programs and possibly the Go libraries.
 
-    sudo apt-get install libfreefare-dev libnfc-dev libssl-dev
+    sudo apt-get install libfreefare-dev libnfc-dev libssl-dev pkg-config
 
 ### RasPi
 
@@ -72,3 +72,7 @@ Prepare some tags and insert their (real) UIDs to the grants and revokes
     INSERT INTO keys VALUES ("04212f69b21e80", 1);
 
 In reality you will generate this file based on your person registry (keep track of validity times etc there, then regenerate the keydb for the door).
+
+## Hacking
+
+Remember to valgrind your C programs (`valgrind -v --leak-check=yes  myprog args`) at the same time as you do general functionality testing.
