@@ -43,7 +43,6 @@ int handle_tag(MifareTag tag, bool *tag_valid)
     uint8_t errcnt = 0;
     bool connected = false;
     MifareDESFireAID aid;
-    //printf("uint32 for aid: 0x%lx\n", (unsigned long)mifare_desfire_aid_get_aid(aid));
     MifareDESFireKey key;
     char *realuid_str = NULL;
     uint8_t diversified_key_data[16];
