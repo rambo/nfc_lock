@@ -152,7 +152,7 @@ RETRY:
     printf("done, got 0x%lx \n", (unsigned long)acl);
 
 
-    printf("Reading member-if file, ");
+    printf("Reading member-id file, ");
     err = mifare_desfire_read_data (tag, nfclock_mid_file_id, 0, sizeof(midbytes), midbytes);
     if (err < 0)
     {
