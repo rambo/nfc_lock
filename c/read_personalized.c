@@ -188,17 +188,31 @@ FAIL:
     return err;
 }
 
+
+pthread_mutex_t tag_processing = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t tag_done = PTHREAD_COND_INITIALIZER;
+
 struct thread_data {
    MifareTag tag;
-   bool *tag_valid;
+   bool tag_valid;
    int  err;
 };
 
-
 void *handle_tag_pthread(void *threadarg)
 {
+    /* allow the thread to be killed at any time */
+    int oldstate;
+    pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, &oldstate);
+
+    // Cast our data struct 
     struct thread_data *my_data;
     my_data = (struct thread_data *) threadarg;
+    // Start processing
+    my_data->err = handle_tag(my_data->tag, &my_data->tag_valid);
+
+    // Signal done and return
+    pthread_cond_signal(&tag_done);
+    return NULL;
 }
 
 
@@ -275,7 +289,7 @@ int main(int argc, char *argv[])
         }
 
         bool valid_found = false;
-        int tagerror = 0;
+        int err = 0;
         for (int i = 0; (!error) && tags[i]; ++i)
         {
             char *tag_uid_str = freefare_get_tag_uid(tags[i]);
@@ -290,10 +304,58 @@ int main(int argc, char *argv[])
             printf("Found DESFire tag %s\n", tag_uid_str);
             free (tag_uid_str);
 
+
+            // Initialize 
+            struct timespec abs_time;
+            pthread_t tid;
+            pthread_mutex_lock(&tag_processing);
+        
+            /* pthread cond_timedwait expects an absolute time to wait until */
+            clock_gettime(CLOCK_REALTIME, &abs_time);
+            abs_time.tv_sec += 1;
+        
+            struct thread_data tagdata;
+            tagdata.tag = tags[i];
+        
+            err = pthread_create(&tid, NULL, handle_tag_pthread, (void *)&tagdata);
+            if (err != 0)
+            {
+                printf("ERROR: pthread_create error %d\n", err);
+                continue;
+            }
+        
+            /* pthread_cond_timedwait can return spuriously: this should
+             * be in a loop for production code
+             */
+            err = pthread_cond_timedwait(&tag_done, &tag_processing, &abs_time);
+            if (err == ETIMEDOUT)
+            {
+                    printf("TIMED OUT\n");
+                    pthread_mutex_unlock(&tag_processing);
+                    continue;
+            }
+            pthread_mutex_unlock(&tag_processing);
+            if (err)
+            {
+                printf("ERROR: pthread_cond_timedwait error %d\n", err);
+                continue;
+            }
+
+            if (tagdata.err != 0)
+            {
+                tagdata.tag_valid = false;
+                continue;
+            }
+            if (tagdata.tag_valid)
+            {
+                valid_found = true;
+            }
+
+            /*
             bool tag_valid = false;
             // TODO: Timeout this so the program does not hang if tag leaves at inopportune time, try http://stackoverflow.com/questions/7738546/how-to-set-a-timeout-for-a-function-in-c
-            tagerror = handle_tag(tags[i], &tag_valid);
-            if (tagerror != 0)
+            err = handle_tag(tags[i], &tag_valid);
+            if (err != 0)
             {
                 tag_valid = false;
                 continue;
@@ -302,6 +364,7 @@ int main(int argc, char *argv[])
             {
                 valid_found = true;
             }
+            */
         }
         freefare_free_tags(tags);
         if (valid_found)
