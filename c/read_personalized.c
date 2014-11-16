@@ -37,11 +37,6 @@ int handle_tag(MifareTag tag, bool *tag_valid)
 {
     const uint8_t errlimit = 3;
     int err = 0;
-    /*
-    uint32_t acl;
-    uint32_t db_acl;
-    bool revoked_found = false;
-    */
     char errstr[] = "";
     uint8_t errcnt = 0;
     bool connected = false;
@@ -50,6 +45,12 @@ int handle_tag(MifareTag tag, bool *tag_valid)
     MifareDESFireKey key;
     char *realuid_str = NULL;
     uint8_t diversified_key_data[16];
+    uint8_t aclbytes[4];
+    uint32_t acl;
+    /*
+    uint8_t midbytes[4];
+    uint16_t mid;
+    */
 
 RETRY:
     if (err != 0)
@@ -142,6 +143,15 @@ RETRY:
     key = NULL;
     printf("done\n");
 
+    printf("Reading ACL file, ");
+    err = mifare_desfire_read_data (tag, nfclock_acl_file_id, 0, sizeof(aclbytes), aclbytes);
+    if (err < 0)
+    {
+        printf("got %d as bytes read", err);
+        goto RETRY;
+    }
+    acl = aclbytes[0] | (aclbytes[1] << 8) | (aclbytes[2] << 16) | (aclbytes[3] << 24);
+    printf("done, got 0x%lx \n", (unsigned long)acl);
 
     // All checks done seems good
     if (realuid_str)
