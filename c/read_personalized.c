@@ -42,7 +42,7 @@ int handle_tag(MifareTag tag, bool *tag_valid)
     char errstr[] = "";
     uint8_t errcnt = 0;
     bool connected = false;
-    MifareDESFireAID aid = mifare_desfire_aid_new(nfclock_aid[0] | (nfclock_aid[1] << 8) | (nfclock_aid[2] << 16));
+    MifareDESFireAID aid;
     //printf("uint32 for aid: 0x%lx\n", (unsigned long)mifare_desfire_aid_get_aid(aid));
     MifareDESFireKey key;
     char *realuid_str = NULL;
@@ -87,6 +87,7 @@ RETRY:
     connected = true;
 
     printf("Selecting application, ");
+    aid = mifare_desfire_aid_new(nfclock_aid[0] | (nfclock_aid[1] << 8) | (nfclock_aid[2] << 16));
     err = mifare_desfire_select_application(tag, aid);
     if (err < 0)
     {
