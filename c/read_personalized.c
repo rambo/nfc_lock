@@ -279,10 +279,16 @@ int main(int argc, char *argv[])
     while(!s_interrupted)
     {
         tags = freefare_get_tags(device);
-        if (   !tags
+        if (   !tags // allocation failed
+            // The tag array ends with null element, if first one is null then array is empty
             || !tags[0])
         {
-            freefare_free_tags(tags);
+            if (tags)
+            {
+                // Free the empty array so we don't leak memory
+                freefare_free_tags(tags);
+                tags = NULL;
+            }
             // Limit polling speed to 10Hz
             usleep(100 * 1000);
             //printf("Polling ...\n");
@@ -306,7 +312,7 @@ int main(int argc, char *argv[])
             free (tag_uid_str);
 
 
-            // Initialize 
+            // pthreads initialization stuff
             struct timespec abs_time;
             pthread_t tid;
             pthread_mutex_lock(&tag_processing);
@@ -315,6 +321,7 @@ int main(int argc, char *argv[])
             clock_gettime(CLOCK_REALTIME, &abs_time);
             abs_time.tv_sec += 1;
         
+            // Use this struct to pass data between thread and main
             struct thread_data tagdata;
             tagdata.tag = tags[i];
         
@@ -325,9 +332,6 @@ int main(int argc, char *argv[])
                 continue;
             }
         
-            /* pthread_cond_timedwait can return spuriously: this should
-             * be in a loop for production code
-             */
             err = pthread_cond_timedwait(&tag_done, &tag_processing, &abs_time);
             if (err == ETIMEDOUT)
             {
@@ -354,23 +358,9 @@ int main(int argc, char *argv[])
             {
                 valid_found = true;
             }
-
-            /*
-            bool tag_valid = false;
-            // TODO: Timeout this so the program does not hang if tag leaves at inopportune time, try http://stackoverflow.com/questions/7738546/how-to-set-a-timeout-for-a-function-in-c
-            err = handle_tag(tags[i], &tag_valid);
-            if (err != 0)
-            {
-                tag_valid = false;
-                continue;
-            }
-            if (tag_valid)
-            {
-                valid_found = true;
-            }
-            */
         }
         freefare_free_tags(tags);
+        tags = NULL;
         if (valid_found)
         {
             printf("OK: valid tag found\n");
