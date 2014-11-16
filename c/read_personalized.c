@@ -212,9 +212,9 @@ int main(int argc, char *argv[])
     }
     else
     {
-        // TODO: This leaks memory but I have no idea what to do about it
         nfc_connstring devices[8];
         size_t device_count;
+        // This will lose a few bytes of memory for some reason, the commented out frees below do not affect the result :(
         device_count = nfc_list_devices(nfc_ctx, devices, 8);
         if (device_count <= 0)
         {
@@ -225,11 +225,13 @@ int main(int argc, char *argv[])
             device = nfc_open (nfc_ctx, devices[d]);
             if (!device)
             {
-                warn("nfc_open() failed for %s", devices[d]);
+                //free(devices[d]);
+                printf("nfc_open() failed for %s", devices[d]);
                 error = EXIT_FAILURE;
                 continue;
             }
             strncpy(connstring, devices[d], NFC_BUFSIZE_CONNSTRING);
+            //free(devices[d]);
             break;
         }
         if (error != EXIT_SUCCESS)
