@@ -212,7 +212,7 @@ void *handle_tag_pthread(void *threadarg)
 
     // Signal done and return
     pthread_cond_signal(&tag_done);
-    return NULL;
+    pthread_exit(NULL);
 }
 
 
