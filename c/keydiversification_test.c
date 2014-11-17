@@ -44,8 +44,10 @@ int main(int argc, char *argv[])
     uint8_t expect_key[16] = { 0xA8, 0xDD, 0x63, 0xA3, 0xB8, 0x9D, 0x54, 0xB3, 0x7C, 0xA8, 0x02, 0x47, 0x3F, 0xDA, 0x91, 0x75 };
     uint8_t base_key[16] = { 0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF };
     uint8_t aid[3] = { 0x30, 0x42, 0xF5 };
+    // PONDER: do we want to pass the AID as uint32 or as bytearray ??
+    //uint32_t aid32 = aid[2] | (aid[1] << 8) | (aid[0] << 16);
     uint8_t sysid[] = { 0x4E, 0x58, 0x50, 0x20, 0x41, 0x62, 0x75 };
-    uint8_t uid[] = { 0x04, 0x78, 0x2E, 0x21, 0x80, 0x1D, 0x80 };
+    char uid[] = "04782E21801D80";
 
     int ret;
     int test_times = 1;
@@ -57,7 +59,7 @@ int main(int argc, char *argv[])
     // Do it a few times to test for memory issues
     for (int i=0; i < test_times; ++i)
     {
-        ret = nfclock_diversify_key_aes128(base_key, aid, uid, sizeof(uid), sysid, sizeof(sysid), new_key);
+        ret = nfclock_diversify_key_aes128(base_key, aid, uid, sysid, sizeof(sysid), new_key);
         if (ret != 0)
         {
             printf("nfclock_diversify_key_aes128 returned %d\n", ret);

@@ -110,10 +110,12 @@ func recalculate_diversified_keys(realuid []byte) error {
     if err != nil {
         return err
     }
+    fmt.Println("Got READ key: ", hex.EncodeToString(acl_read_bytes));
     acl_write_bytes, err := keydiversification.AES128(appinfo.acl_write_base, appinfo.aidbytes, realuid, appinfo.sysid)
     if err != nil {
         return err
     }
+    fmt.Println("Got WRITE key: ", hex.EncodeToString(acl_write_bytes));
     keychain.acl_read_key = helpers.Bytes2aeskey(acl_read_bytes)
     keychain.acl_write_key = helpers.Bytes2aeskey(acl_write_bytes)
     return nil
@@ -237,6 +239,9 @@ func main() {
             }
             fmt.Println("aidbytes:", hex.EncodeToString(appinfo.aidbytes));
             fmt.Println(fmt.Sprintf("aid: 0x%x", appinfo.aid.Aid()));
+
+            fmt.Println("sysid (hex):", hex.EncodeToString(appinfo.sysid));
+            fmt.Println("sysid:", appinfo.sysid);
 
             fmt.Println("realuid:", hex.EncodeToString(realuid));
 

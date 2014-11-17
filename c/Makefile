@@ -13,6 +13,12 @@ LDFLAGS    =
 
 PROGRAM = read_personalized
 PROGRAM_FILES = keydiversification.c read_personalized.c
+CFLAGS += -pthread
+
+
+#PROGRAM = pthread_example
+#PROGRAM_FILES = pthread_example.c
+#CFLAGS += -pthread
 
 
 CFLAGS	+= -g $(shell pkg-config --cflags libfreefare openssl)
@@ -41,7 +47,7 @@ clean:
 ## Name of executable target:
 #EXECUTABLE = mifare-desfire-access 
 #
-#CFLAGS     += `pkg-config --cflags libfreefare`
+#CFLAGS     += `pkg-config --cflags libfreefare pthread`
 #LDFLAGS    += `pkg-config --libs libfreefare`
 #
 #
