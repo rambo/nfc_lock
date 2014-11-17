@@ -17,7 +17,8 @@ READ_PRESONALIZED_SRC = keydiversification.c read_personalized.c
 
 #PROGRAM = pthread_example
 #PROGRAM_FILES = pthread_example.c
-#CFLAGS += -pthread
+
+CFLAGS_WITH_PTHREAD = $(CFLAGS) -pthread
 
 
 CFLAGS	+= -g $(shell pkg-config --cflags libfreefare openssl)
@@ -30,10 +31,10 @@ mifare-desfire-access: $(MIFARE_DESFIRE_ACCESS_SRC)
 	$(CC) $(MIFARE_DESFIRE_ACCESS_SRC) $(CFLAGS) $(LDFLAGS) -o $(PROGRAM) $(LIBS)
 
 keydiversification_test: $(KEYDIVERSIFICATION_TEST_SRC)
-	$(CC) $(KEYDIVERSIFICATION_TEST_SRC) $(CFLAGS) -pthread $(LDFLAGS) -o $(PROGRAM) $(LIBS)
+	$(CC) $(KEYDIVERSIFICATION_TEST_SRC) $(CFLAGS_WITH_PTHREAD) $(LDFLAGS) -o $(PROGRAM) $(LIBS)
 
 read_personalized: $(READ_PERSONALIZED_SRC)
-	$(CC) $(READ_PRESONALIZED_SRC) $(CFLAGS) -pthread $(LDFLAGS) -o $(PROGRAM) $(LIBS)
+	$(CC) $(READ_PRESONALIZED_SRC) $(CFLAGS_WITH_PTHREAD) $(LDFLAGS) -o $(PROGRAM) $(LIBS)
 
 clean:
 	@rm -rf $(PROGRAMS)
