@@ -24,7 +24,7 @@ CFLAGS	+= -g $(shell pkg-config --cflags libfreefare openssl)
 LDFLAGS	+= -g
 LIBS 	+= $(shell pkg-config --libs libfreefare openssl) 
 
-all: $(PROGRAM)
+all: $(PROGRAMS)
 
 mifare-desfire-access: $(MIFARE_DESFIRE_ACCESS_SRC)
 	$(CC) $(MIFARE_DESFIRE_ACCESS_SRC) $(CFLAGS) $(LDFLAGS) -o $(PROGRAM) $(LIBS)
@@ -36,7 +36,7 @@ read_personalized: $(READ_PERSONALIZED_SRC)
 	$(CC) $(READ_PRESONALIZED_SRC) $(CFLAGS) -pthread $(LDFLAGS) -o $(PROGRAM) $(LIBS)
 
 clean:
-	@rm -rf $(PROGRAM)
+	@rm -rf $(PROGRAMS)
 		    
 ## Alternate way
 ## Set up basic variables:
