@@ -1,37 +1,43 @@
 CC         = gcc
 CFLAGS     = -g -Wall -std=gnu99
 LDFLAGS    =
+PROGRAMS   =
 
-#PROGRAM = mifare-desfire-access
-#PROGRAM_FILES = mifare-desfire-access.c
+PROGRAMS += mifare-desfire-access
+MIFARE_DESFIRE_ACCESS_SRC = mifare-desfire-access.c
 
 #PROGRAM = cmac_example
 #PROGRAM_FILES = cmac_example.c
 
-#PROGRAM = keydiversification_test
-#PROGRAM_FILES = keydiversification.c keydiversification_test.c
+PROGRAMS += keydiversification_test
+KEYDIVERSIFICATION_TEST_SRC = keydiversification.c keydiversification_test.c
 
-PROGRAM = read_personalized
-PROGRAM_FILES = keydiversification.c read_personalized.c
-CFLAGS += -pthread
-
+PROGRAMS += read_personalized
+READ_PRESONALIZED_SRC = keydiversification.c read_personalized.c
 
 #PROGRAM = pthread_example
 #PROGRAM_FILES = pthread_example.c
-#CFLAGS += -pthread
+
+CFLAGS_WITH_PTHREAD = $(CFLAGS) -pthread
 
 
 CFLAGS	+= -g $(shell pkg-config --cflags libfreefare openssl)
 LDFLAGS	+= -g
 LIBS 	+= $(shell pkg-config --libs libfreefare openssl) 
 
-all: $(PROGRAM)
+all: $(PROGRAMS)
 
-%: %.c 
-	$(CC) $(PROGRAM_FILES) $(CFLAGS) $(LDFLAGS) -o $(PROGRAM) $(LIBS)
+mifare-desfire-access: $(MIFARE_DESFIRE_ACCESS_SRC)
+	$(CC) $(MIFARE_DESFIRE_ACCESS_SRC) $(CFLAGS) $(LDFLAGS) -o $@ $(LIBS)
+
+keydiversification_test: $(KEYDIVERSIFICATION_TEST_SRC)
+	$(CC) $(KEYDIVERSIFICATION_TEST_SRC) $(CFLAGS_WITH_PTHREAD) $(LDFLAGS) -o $@ $(LIBS)
+
+read_personalized: $(READ_PERSONALIZED_SRC)
+	$(CC) $(READ_PRESONALIZED_SRC) $(CFLAGS_WITH_PTHREAD) $(LDFLAGS) -o $@ $(LIBS)
 
 clean:
-	@rm -rf $(PROGRAM)
+	@rm -rf $(PROGRAMS)
 		    
 ## Alternate way
 ## Set up basic variables:
