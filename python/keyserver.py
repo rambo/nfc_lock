@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 from __future__ import with_statement
+import os, sys
 from exceptions import NotImplementedError,RuntimeError,KeyboardInterrupt
 import sqlite3
 # Decimal recipe from http://stackoverflow.com/questions/6319409/how-to-convert-python-decimal-to-sqlite-numeric
@@ -14,6 +15,9 @@ import datetime
 sqlite3.register_adapter(datetime.datetime, lambda dt: dt.strftime("%Y-%m-%d %H:%M:%S.%f")[:23])
 # The type on SQLite is "TIMESTAMP" even if we specified "DATETIME" in table creation...
 sqlite3.register_converter("TIMESTAMP", lambda s: datetime.datetime.strptime(s.ljust(26,"0"), "%Y-%m-%d %H:%M:%S.%f"))
+
+import yaml
+
 
 class keyserver(object):
     config_file = None
@@ -35,11 +39,16 @@ class keyserver(object):
         posixsignal.signal(posixsignal.SIGHUP, self.reload)
 
     def reload(self, *args):
-        if self.connection:
-            self.connection.close()
+        if self.sqlite_connection:
+            self.sqlite_connection.close()
         with open(self.config_file) as f:
             self.config = yaml.load(f)
-        self.db_file = self.config['keydb']
+        if os.path.exists(self.config['keydb']):
+            self.db_file = os.path.realpath(self.config['keydb'])
+        else:
+            self.db_file = os.path.realpath(os.path.join(os.path.dirname(os.path.realpath(self.config_file)), self.config['keydb']))
+        if not os.path.exists(self.db_file):
+            raise RuntimeError("DB file %s does not exist!" % self.db_file)
         self.sqlite_connection = sqlite3.connect(self.db_file, detect_types=sqlite3.PARSE_DECLTYPES)
         self.sqlite_cursor = self.sqlite_connection.cursor()
         print("Config (re-)loaded")
@@ -55,12 +64,12 @@ class keyserver(object):
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:
-        print("Usage: card_watcher.py config.yml")
+        print("Usage: keyserver.py config.yml")
         sys.exit(1)
 
     # TODO: Use tornado from ZMQ
     loop = None
-    instance = card_watcher(sys.argv[1], loop)
+    instance = keyserver(sys.argv[1], loop)
     instance.hook_signals()
     try:
         instance.run()
