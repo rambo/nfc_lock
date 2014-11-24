@@ -1,0 +1,68 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+from __future__ import with_statement
+from exceptions import NotImplementedError,RuntimeError,KeyboardInterrupt
+import sqlite3
+# Decimal recipe from http://stackoverflow.com/questions/6319409/how-to-convert-python-decimal-to-sqlite-numeric
+#import decimal
+# Register the adapter
+#sqlite3.register_adapter(decimal.Decimal, lambda d: str(d))
+# Register the converter
+#sqlite3.register_converter("NUMERIC", lambda s: decimal.Decimal(s))
+# Register converter&adapter for datetime in the same way
+import datetime
+sqlite3.register_adapter(datetime.datetime, lambda dt: dt.strftime("%Y-%m-%d %H:%M:%S.%f")[:23])
+# The type on SQLite is "TIMESTAMP" even if we specified "DATETIME" in table creation...
+sqlite3.register_converter("TIMESTAMP", lambda s: datetime.datetime.strptime(s.ljust(26,"0"), "%Y-%m-%d %H:%M:%S.%f"))
+
+class keyserver(object):
+    config_file = None
+    mainloop = None
+    sqlite_connection = None
+    sqlite_cursor = None
+    db_file =  None
+
+    def __init__(self, config_file, mainloop):
+        self.config_file = config_file
+        self.mainloop = mainloop
+        self.reload()
+
+    def hook_signals(self):
+        """Hooks POSIX signals to correct callbacks, call only from the main thread!"""
+        import signal as posixsignal
+        posixsignal.signal(posixsignal.SIGTERM, self.quit)
+        posixsignal.signal(posixsignal.SIGQUIT, self.quit)
+        posixsignal.signal(posixsignal.SIGHUP, self.reload)
+
+    def reload(self, *args):
+        if self.connection:
+            self.connection.close()
+        with open(self.config_file) as f:
+            self.config = yaml.load(f)
+        self.db_file = self.config['keydb']
+        self.sqlite_connection = sqlite3.connect(self.db_file, detect_types=sqlite3.PARSE_DECLTYPES)
+        self.sqlite_cursor = self.sqlite_connection.cursor()
+        print("Config (re-)loaded")
+
+    def quit(self, *args):
+        self.mainloop.quit()
+
+    def run(self):
+        print("Starting mainloop")
+        self.mainloop.run()
+
+
+
+if __name__ == '__main__':
+    if len(sys.argv) < 2:
+        print("Usage: card_watcher.py config.yml")
+        sys.exit(1)
+
+    # TODO: Use tornado from ZMQ
+    loop = None
+    instance = card_watcher(sys.argv[1], loop)
+    instance.hook_signals()
+    try:
+        instance.run()
+    except KeyboardInterrupt:
+        instance.quit()
