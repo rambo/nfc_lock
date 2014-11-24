@@ -11,12 +11,13 @@ Ubuntu 14.04 has libnfc but no libfreefare, use [this PPA](https://launchpad.net
     sudo apt-get update
     sudo apt-get install libnfc5 libnfc-bin libnfc-pn53x-examples libnfc-examples
     sudo apt-get install libfreefare0 libfreefare-bin
+    sudo apt-get install python-zmq python-yaml python-tornado # YAML and tornado can be installed to virtualenv, zmq will be painfull
 
 ### For compiling
 
 For the C programs and possibly the Go libraries.
 
-    sudo apt-get install libfreefare-dev libnfc-dev libssl-dev pkg-config
+    sudo apt-get install libfreefare-dev libnfc-dev libssl-dev pkg-config libzmq-dev
 
 ### RasPi
 
