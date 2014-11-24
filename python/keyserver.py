@@ -17,6 +17,7 @@ sqlite3.register_adapter(datetime.datetime, lambda dt: dt.strftime("%Y-%m-%d %H:
 sqlite3.register_converter("TIMESTAMP", lambda s: datetime.datetime.strptime(s.ljust(26,"0"), "%Y-%m-%d %H:%M:%S.%f"))
 
 import yaml
+import zmq
 
 
 class keyserver(object):
@@ -54,11 +55,11 @@ class keyserver(object):
         print("Config (re-)loaded")
 
     def quit(self, *args):
-        self.mainloop.quit()
+        self.mainloop.stop()
 
     def run(self):
         print("Starting mainloop")
-        self.mainloop.run()
+        self.mainloop.start()
 
 
 
@@ -68,7 +69,9 @@ if __name__ == '__main__':
         sys.exit(1)
 
     # TODO: Use tornado from ZMQ
-    loop = None
+    from zmq.eventloop import ioloop
+    ioloop.install()
+    loop = ioloop.IOLoop.instance()
     instance = keyserver(sys.argv[1], loop)
     instance.hook_signals()
     try:
