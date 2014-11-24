@@ -1,12 +1,27 @@
 #include <zmq.h>
 #include <zmq_utils.h>
-#include <string.h>
+#include <string.h> // memcpy
+#include <stdlib.h> //realloc
 #include <stdio.h>
 #include <unistd.h>
 #include <stdbool.h>
 #include <stdint.h>
 
 #define ZMQ_NUM_IOTHREADS 1
+
+// Reads the message body to a string, returns pointer you must free
+char* msg_to_str(zmq_msg_t* msg)
+{
+    size_t size = zmq_msg_size(msg);
+    if (size < 1)
+    {
+        return NULL;
+    }
+    char *string = malloc(size + 1);
+    memcpy(string, zmq_msg_data(msg), size);
+    string[size] = 0x0; // Force last byte to null
+    return (string);
+}
 
 int main(int argc, char *argv[])
 {
@@ -65,7 +80,11 @@ int main(int argc, char *argv[])
         }
 
         printf("Received part %d, %d bytes\n", partno, (int)zmq_msg_size(&message));
-        // TODO: read the part data
+
+        // Read the body as string
+        char* body = msg_to_str(&message);
+        printf("==\n%s\n==\n", body);
+        free(body);
 
         // Done with message
         zmq_msg_close (&message);
