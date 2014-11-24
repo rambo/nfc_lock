@@ -65,10 +65,24 @@ class keyserver(object):
     def _on_recv(self, data, *args, **kwargs):
         print("_on_recv: data=%s" % repr(data))
         if len(data) != 1:
-            self.zmq_stream.send_multipart(["-1"]) # Invalid request
-            
-        uid = data[0]
-        self.zmq_stream.send_multipart(["1", "0x1"])
+            self.zmq_stream.send_multipart(["INV", "0x0"]) # Invalid request
+            return
+
+        uid = data[0].lower()
+
+        self.sqlite_cursor.execute("SELECT rowid FROM revoked WHERE uid=?;", (uid, ) )
+        revokeddata = self.sqlite_cursor.fetchone()
+        if revokeddata:
+            self.zmq_stream.send_multipart(["REV", "0x0"]) # Revoked card
+            return
+
+        self.sqlite_cursor.execute("SELECT acl FROM keys WHERE uid=?;", (uid, ) )
+        acldata = self.sqlite_cursor.fetchone()
+        if not acldata:
+            self.zmq_stream.send_multipart(["NF", "0x0"]) # Not found
+            return
+
+        self.zmq_stream.send_multipart(["OK", "0x%x" % acldata[0]])
         
 
     def quit(self, *args):
