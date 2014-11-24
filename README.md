@@ -11,7 +11,9 @@ Ubuntu 14.04 has libnfc but no libfreefare, use [this PPA](https://launchpad.net
     sudo apt-get update
     sudo apt-get install libnfc5 libnfc-bin libnfc-pn53x-examples libnfc-examples
     sudo apt-get install libfreefare0 libfreefare-bin
-    sudo apt-get install python-zmq python-yaml python-tornado # YAML and tornado can be installed to virtualenv, zmq will be painfull
+    sudo apt-get install python-zmq python-yaml python-tornado
+
+`python-yaml` and `python-tornado` can be installed to virtualenv (esp tornado might be better to isntall via pip even if not to virtualenv the deb pulls unneccessary dependencies, zmq will be painfull.
 
 ### For compiling
 
