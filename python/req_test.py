@@ -9,8 +9,8 @@ from zmq.eventloop.zmqstream import ZMQStream
 
 
 if __name__ == '__main__':
-    if len(sys.argv) < 2:
-        print("Usage: req_test.py config.yml")
+    if len(sys.argv) < 3:
+        print("Usage: req_test.py config.yml card_uid")
         sys.exit(1)
 
     with open(sys.argv[1]) as f:
@@ -22,7 +22,7 @@ if __name__ == '__main__':
     
     while(True):
         print("Sending request")
-        socket.send("Hello")
+        socket.send(sys.argv[2])
         print("Waiting for reply")
         message = socket.recv_multipart()
         print("Got reply: %s" % repr(message))
