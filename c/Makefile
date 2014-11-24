@@ -18,6 +18,12 @@ READ_PRESONALIZED_SRC = keydiversification.c read_personalized.c
 PROGRAMS += pthread_example
 PTHREAD_EXAMPLE_SRC = pthread_example.c
 
+PROGRAMS += req_test
+REQ_TEST_SRC = req_test.c
+
+
+
+
 CFLAGS_WITH_PTHREAD = $(CFLAGS) -pthread
 CFLAGS_WITH_ZMQ = $(CFLAGS) $(shell pkg-config --cflags libzmq)
 LIBS_WITH_ZMQ = $(LIBS) $(shell pkg-config --libs libzmq)
@@ -40,8 +46,11 @@ read_personalized: $(READ_PERSONALIZED_SRC)
 pthread_example: $(PTHREAD_EXAMPLE_SRC)
 	$(CC) $(READ_PRESONALIZED_SRC) $(CFLAGS_WITH_PTHREAD) $(LDFLAGS) -o $@ $(LIBS)
 
-cmac_example: $(MIFARE_DESFIRE_ACCESS_SRC)
+cmac_example: $(CMAC_EXAMPLE_SRC)
 	$(CC) $(CMAC_EXAMPLE_SRC) $(CFLAGS) $(LDFLAGS) -o $@ $(LIBS)
+
+req_test: $(REQ_TEST_SRC)
+	$(CC) $(REQ_TEST_SRC) $(CFLAGS_WITH_ZMQ) $(LDFLAGS) -o $@ $(LIBS_WITH_ZMQ)
 
 
 clean:
