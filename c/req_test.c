@@ -4,6 +4,8 @@
 #include <stdio.h>
 #include <unistd.h>
 
+#define ZMQ_NUM_IOTHREADS 1
+
 int main(int argc, char *argv[])
 {
     if (argc < 3)
@@ -12,13 +14,13 @@ int main(int argc, char *argv[])
         return 1;
     }
     int err;
-
-    void *context = zmq_ctx_new();
+    // TODO: IFDEF on the API version ? we use 2.2 due to raspbian not having 3.2 packages
+    void *context = zmq_init(ZMQ_NUM_IOTHREADS);
     void *requester = zmq_socket(context, ZMQ_REQ);
     err = zmq_connect(requester, argv[1]);
     if (err != 0)
     {
-        printf("ERROR: zmq_connect failed with %d", errno);
+        printf("ERROR: zmq_connect failed with %d", zmq_errno());
         goto END;
     }
 
@@ -27,12 +29,12 @@ int main(int argc, char *argv[])
     err = zmq_msg_init_size(&request, uidlen);
     if (err != 0)
     {
-        printf("ERROR: zmq_msg_init_size failed with %d", errno);
+        printf("ERROR: zmq_msg_init_size failed with %d", zmq_errno());
         goto END;
     }
     memcpy(zmq_msg_data(&request), argv[2], uidlen);
     printf("Sending request");
-    zmq_msg_send(&request, requester, 0);
+    zmq_send(&request, requester, 0);
     zmq_msg_close(&request);
 
     printf("Waiting for response");
@@ -42,7 +44,7 @@ int main(int argc, char *argv[])
         partno++;
         zmq_msg_t message;
         zmq_msg_init(&message);
-        zmq_msg_recv(requester, &message, 0);
+        zmq_recv(requester, &message, 0);
 
         printf("Received part %d, %d bytes", partno, message.size);
 
@@ -91,6 +93,6 @@ int main (void)
 */
 END:
     zmq_close(requester);
-    zmq_ctx_destroy(context);
+    zmq_term(context);
     return err;
 }
