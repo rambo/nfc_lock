@@ -25,8 +25,8 @@ REQ_TEST_SRC = req_test.c
 
 
 CFLAGS_WITH_PTHREAD = $(CFLAGS) -pthread
-CFLAGS_WITH_ZMQ = $(CFLAGS) $(shell pkg-config --cflags libzmq)
-LIBS_WITH_ZMQ = $(LIBS) $(shell pkg-config --libs libzmq)
+CFLAGS_WITH_ZMQ = $(shell pkg-config --cflags libzmq) $(CFLAGS) 
+LIBS_WITH_ZMQ = $(shell pkg-config --libs libzmq) $(LIBS) 
 
 CFLAGS	+= -g $(shell pkg-config --cflags libfreefare openssl)
 LDFLAGS	+= -g
