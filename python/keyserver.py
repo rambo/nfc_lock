@@ -62,8 +62,14 @@ class keyserver(object):
 
         print("Config (re-)loaded")
 
-    def _on_recv(*args, **kwargs):
-        print("Got args=%s\n    kwargs=%" % (args, kwargs))
+    def _on_recv(self, data, *args, **kwargs):
+        print("_on_recv: data=%s" % repr(data))
+        if len(data) != 1:
+            self.zmq_stream.send_multipart(["-1"]) # Invalid request
+            
+        uid = data[0]
+        self.zmq_stream.send_multipart(["1", "0x1"])
+        
 
     def quit(self, *args):
         # This will close the sockets too
