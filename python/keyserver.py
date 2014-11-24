@@ -73,15 +73,18 @@ class keyserver(object):
         self.sqlite_cursor.execute("SELECT rowid FROM revoked WHERE uid=?;", (uid, ) )
         revokeddata = self.sqlite_cursor.fetchone()
         if revokeddata:
+            # PONDER: Do we log this here or let the gatekeeper program to publish the final result ?
             self.zmq_stream.send_multipart(["REV", "0x0"]) # Revoked card
             return
 
         self.sqlite_cursor.execute("SELECT acl FROM keys WHERE uid=?;", (uid, ) )
         acldata = self.sqlite_cursor.fetchone()
         if not acldata:
+            # PONDER: Do we log this here or let the gatekeeper program to publish the final result ?
             self.zmq_stream.send_multipart(["NF", "0x0"]) # Not found
             return
 
+        # PONDER: About logging: note that we do not yet know if this ACL is accepted at the gatekeeper end
         self.zmq_stream.send_multipart(["OK", "0x%x" % acldata[0]])
         
 
