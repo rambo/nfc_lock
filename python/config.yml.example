@@ -1,1 +1,2 @@
 keydb: "../keys.db"
+rep_socket: "tcp://*:7070"

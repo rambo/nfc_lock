@@ -18,6 +18,7 @@ sqlite3.register_converter("TIMESTAMP", lambda s: datetime.datetime.strptime(s.l
 
 import yaml
 import zmq
+from zmq.eventloop.zmqstream import ZMQStream
 
 
 class keyserver(object):
@@ -52,9 +53,21 @@ class keyserver(object):
             raise RuntimeError("DB file %s does not exist!" % self.db_file)
         self.sqlite_connection = sqlite3.connect(self.db_file, detect_types=sqlite3.PARSE_DECLTYPES)
         self.sqlite_cursor = self.sqlite_connection.cursor()
+        
+        self.zmq_context = zmq.Context()
+        self.zmq_socket = self.zmq_context.socket(zmq.REP)
+        self.zmq_socket.bind(self.config['rep_socket'])
+        self.zmq_stream = ZMQStream(self.zmq_socket)
+        self.zmq_stream.on_recv(self._on_recv)
+
         print("Config (re-)loaded")
 
+    def _on_recv(*args, **kwargs):
+        print("Got args=%s\n    kwargs=%" % (args, kwargs))
+
     def quit(self, *args):
+        # This will close the sockets too
+        self.zmq_context.destroy()
         self.mainloop.stop()
 
     def run(self):
