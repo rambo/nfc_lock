@@ -14,9 +14,16 @@
 
 #include <nfc/nfc.h>
 #include <freefare.h>
+#include <zmq.h>
 
 #include "smart_node_config.h"
 #include "keydiversification.h"
+
+#define ZMQ_NUM_IOTHREADS 1
+#define ZMQ_DB_ORACLE_ADDRESS "tcp://localhost:7070"
+// TODO: Configure this in a saner location
+#define REQUIRE_ACL 0x1
+
 
 // Catch SIGINT and SIGTERM so we can do a clean exit
 static int s_interrupted = 0;
@@ -35,6 +42,107 @@ static void s_catch_signals (void)
     sigaction (SIGTERM, &action, NULL);
 }
 
+// Reads the message body to a string, returns pointer you must free
+char* msg_to_str(zmq_msg_t* msg)
+{
+    size_t size = zmq_msg_size(msg);
+    if (size < 1)
+    {
+        return NULL;
+    }
+    char *string = malloc(size + 1);
+    memcpy(string, zmq_msg_data(msg), size);
+    string[size] = 0x0; // Force last byte to null
+    return (string);
+}
+/**
+ * Checks the given uid against the db oracle
+ *
+ * return -1 on general error, 0 if tag is ok, -2 for unknown -3 for revoked
+ */
+int uid_valid(char* uid, uint32_t *acl)
+{
+    int err;
+    void *context = zmq_init(ZMQ_NUM_IOTHREADS);
+    void *requester = zmq_socket(context, ZMQ_REQ);
+    err = zmq_connect(requester, ZMQ_DB_ORACLE_ADDRESS);
+    if (err != 0)
+    {
+        printf("ERROR: zmq_connect failed with %s\n", zmq_strerror(zmq_errno()));
+        goto END;
+    }
+
+    zmq_msg_t request;
+    int uidlen = strlen(uid);
+    err = zmq_msg_init_size(&request, uidlen);
+    if (err != 0)
+    {
+        printf("ERROR: zmq_msg_init_size failed with %s\n", zmq_strerror(zmq_errno()));
+        goto END;
+    }
+    memcpy(zmq_msg_data(&request), uid, uidlen);
+    err = zmq_send(requester, &request, 0);
+    if (err != 0)
+    {
+        printf("ERROR: zmq_send failed with %s\n", zmq_strerror(zmq_errno()));
+        goto END;
+    }
+    zmq_msg_close(&request);
+
+    int partno = 0;
+    while (1)
+    {
+        partno++;
+        zmq_msg_t message;
+        zmq_msg_init(&message);
+        if (err != 0)
+        {
+            printf("ERROR: zmq_msg_init failed with %s\n", zmq_strerror(zmq_errno()));
+            goto END;
+        }
+        err = zmq_recv(requester, &message, 0);
+        if (err != 0)
+        {
+            zmq_msg_close (&message);
+            printf("ERROR: zmq_recv failed with %s\n", zmq_strerror(zmq_errno()));
+            goto END;
+        }
+
+        printf("Received part %d, %d bytes\n", partno, (int)zmq_msg_size(&message));
+
+        // Read the body as string
+        char* body = msg_to_str(&message);
+        printf("==\n%s\n==\n", body);
+        free(body);
+
+        // Done with message
+        zmq_msg_close (&message);
+        
+        // See if we have more parts
+        int64_t more;
+        size_t more_size = sizeof(more);
+        err = zmq_getsockopt(requester, ZMQ_RCVMORE, &more, &more_size);
+        if (err != 0)
+        {
+            printf("ERROR: zmq_getsockopt failed with %s\n", zmq_strerror(zmq_errno()));
+            goto END;
+        }
+        if (!more)
+        {
+            break;
+        }
+    }
+    printf("All %d parts received\n", partno);
+    err = 0;
+    // FIXME: Parse this from the ZMQ message
+    *acl = 0x1;
+
+END:
+    zmq_close(requester);
+    zmq_term(context);
+    return err;
+}
+
 int handle_tag(MifareTag tag, bool *tag_valid)
 {
     const uint8_t errlimit = 3;
@@ -48,8 +156,9 @@ int handle_tag(MifareTag tag, bool *tag_valid)
     uint8_t diversified_key_data[16];
     uint8_t aclbytes[4];
     uint32_t acl;
-    uint8_t midbytes[2];
-    uint16_t mid;
+    uint32_t db_acl;
+
+    *tag_valid = false;
 
 RETRY:
     if (err != 0)
@@ -129,6 +238,30 @@ RETRY:
         goto FAIL;
     }
 
+    err = uid_valid(realuid_str, &db_acl);
+    if (err != 0)
+    {
+        switch (err)
+        {
+            case -3:
+                // Revoked!
+                // TODO: Overwrite the card ACL to 0x0
+                printf("REVOKED card\n");
+                goto FAIL;
+                break;
+            case -2:
+                // Unknown card
+                // PONDER: Should we overwrite the ACL here too ? probably...
+                printf("Unknown card\n");
+                goto FAIL;
+                break;
+            default:
+                // Unknown error case
+                printf("Don't know what error from uid_valid %d means\n", err);
+                goto FAIL;
+        }
+    }
+
     printf("Re-auth with ACL read key, ");
     key = mifare_desfire_aes_key_new_with_version((uint8_t*)diversified_key_data, 0x0);
     err = mifare_desfire_authenticate(tag, nfclock_acl_read_keyid, key);
@@ -153,18 +286,15 @@ RETRY:
     acl = aclbytes[0] | (aclbytes[1] << 8) | (aclbytes[2] << 16) | (aclbytes[3] << 24);
     printf("done, got 0x%lx \n", (unsigned long)acl);
 
-
-    printf("Reading member-id file, ");
-    err = mifare_desfire_read_data (tag, nfclock_mid_file_id, 0, sizeof(midbytes), midbytes);
-    if (err < 0)
+    if (acl != db_acl)
     {
-        printf("got %d as bytes read", err);
-        goto RETRY;
+        // TODO: Overwrite ACL file on card
     }
-    mid = midbytes[0] | (midbytes[1] << 8);
-    printf("done, got %d \n", mid);
-
-
+    
+    if (db_acl & REQUIRE_ACL)
+    {
+        *tag_valid = true;
+    }
     // All checks done seems good
     if (realuid_str)
     {
@@ -172,7 +302,6 @@ RETRY:
         realuid_str = NULL;
     }
     mifare_desfire_disconnect(tag);
-    *tag_valid = true;
     return 0;
 FAIL:
     if (realuid_str)
