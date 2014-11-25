@@ -63,6 +63,7 @@ char* msg_to_str(zmq_msg_t* msg)
 int uid_valid(char* uid, uint32_t *acl)
 {
     int err;
+    int card_ret = -1;
     void *context = zmq_init(ZMQ_NUM_IOTHREADS);
     void *requester = zmq_socket(context, ZMQ_REQ);
     err = zmq_connect(requester, ZMQ_DB_ORACLE_ADDRESS);
@@ -112,10 +113,48 @@ int uid_valid(char* uid, uint32_t *acl)
 
         // Read the body as string
         char* body = msg_to_str(&message);
-        printf("==\n%s\n==\n", body);
-        free(body);
+
+        switch(partno)
+        {
+            case 1:
+                if (strcmp(body, "OK") == 0)
+                {
+                    card_ret = 0;
+                    break;
+                }
+                if (strcmp(body, "NF") == 0)
+                {
+                    card_ret = -2;
+                    break;
+                }
+                if (strcmp(body, "REV") == 0)
+                {
+                    card_ret = -3;
+                    break;
+                }
+                printf("Don't know what part %d body '%s' means\n", partno, body);
+                break;
+            case 2:
+                switch(card_ret)
+                {
+                    case 0:
+                        // Parse the ACL (hex-encoded) number
+                        *acl = strtol(body, NULL, 0);
+                        break;
+                    case -2:
+                        // fall-through
+                    case -3:
+                        *acl = 0x0;
+                        break;
+                }
+                break;
+            default:
+                printf("Received message part %d, don't know what to do with it", partno);
+                break;
+        }
 
         // Done with message
+        free(body);
         zmq_msg_close (&message);
         
         // See if we have more parts
@@ -133,10 +172,7 @@ int uid_valid(char* uid, uint32_t *acl)
         }
     }
     printf("All %d parts received\n", partno);
-    err = 0;
-    // FIXME: Parse this from the ZMQ message
-    *acl = 0x1;
-
+    err = card_ret;
 END:
     zmq_close(requester);
     zmq_term(context);
@@ -261,6 +297,7 @@ RETRY:
                 goto FAIL;
         }
     }
+    printf("db_acl=0x%lx \n", (unsigned long)db_acl);
 
     printf("Re-auth with ACL read key, ");
     key = mifare_desfire_aes_key_new_with_version((uint8_t*)diversified_key_data, 0x0);
