@@ -11,7 +11,7 @@ static int nfclock_hex2data(uint8_t *data, const char *hexstring, size_t len);
  *
  * @param base_key pointer to The master key to diversify (as bytearray)
  * @param aid pointer to Application id (as bytearray)
- * @param uid pointer to Card UID (as bytearray, or null-terminated hex string, whatever libfreefare returns)
+ * @param uid_str pointer to Card UID (as null-terminated hex string)
  * @param sysid pointer to the "System ID" (as bytearray) this can be anything as long as it's constant and not too long
  * @param new_key pointer to the array we will overwrite with new key data
  * @return int 0 for no errors, error code otherwise
