@@ -109,8 +109,6 @@ int uid_valid(char* uid, uint32_t *acl)
             goto END;
         }
 
-        printf("Received part %d, %d bytes\n", partno, (int)zmq_msg_size(&message));
-
         // Read the body as string
         char* body = msg_to_str(&message);
 
@@ -171,7 +169,6 @@ int uid_valid(char* uid, uint32_t *acl)
             break;
         }
     }
-    printf("All %d parts received\n", partno);
     err = card_ret;
 END:
     zmq_close(requester);
