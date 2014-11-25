@@ -21,6 +21,8 @@ PTHREAD_EXAMPLE_SRC = pthread_example.c
 PROGRAMS += req_test
 REQ_TEST_SRC = req_test.c
 
+PROGRAMS += gatekeeper
+GATEKEEPER_SRC = keydiversification.c gatekeeper.c
 
 
 
@@ -51,6 +53,9 @@ cmac_example: $(CMAC_EXAMPLE_SRC)
 
 req_test: $(REQ_TEST_SRC)
 	$(CC) $(REQ_TEST_SRC) $(CFLAGS_WITH_ZMQ) $(LDFLAGS) -o $@ $(LIBS_WITH_ZMQ)
+
+gatekeeper: $(GATEKEEPER_SRC)
+	$(CC) $(GATEKEEPER_SRC) $(CFLAGS_WITH_ZMQ) -pthread $(LDFLAGS) -o $@ $(LIBS_WITH_ZMQ)
 
 
 clean:
