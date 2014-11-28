@@ -20,9 +20,11 @@
 #include "keydiversification.h"
 
 #define ZMQ_NUM_IOTHREADS 5
+// TODO: Configure these in a saner location
 #define ZMQ_DB_ORACLE_ADDRESS "tcp://localhost:7070"
-// TODO: Configure this in a saner location
+#define ZMQ_ANNOUNCER_ADDRESS "tcp://*:7071"
 #define REQUIRE_ACL 0x1
+#define MY_ANNOUNCE_ID "door:open"
 
 
 // Catch SIGINT and SIGTERM so we can do a clean exit
@@ -55,6 +57,23 @@ char* msg_to_str(zmq_msg_t* msg)
     string[size] = 0x0; // Force last byte to null
     return (string);
 }
+
+// Puts a string to a message, returns message pointer you must close (or null on failure)
+int str_to_msg(char* send, zmq_msg_t* msg)
+{
+    int err;
+    int len = strlen(send);
+    err = zmq_msg_init_size(msg, len);
+    if (err != 0)
+    {
+        printf("ERROR: zmq_msg_init_size failed with %s\n", zmq_strerror(zmq_errno()));
+        return err;
+    }
+    memcpy(zmq_msg_data(msg), send, len);
+    return 0;
+}
+
+
 /**
  * Checks the given uid against the db oracle
  *
@@ -73,6 +92,7 @@ int uid_valid(char* uid, uint32_t *acl)
         goto END;
     }
 
+    /*
     zmq_msg_t request;
     int uidlen = strlen(uid);
     err = zmq_msg_init_size(&request, uidlen);
@@ -82,6 +102,14 @@ int uid_valid(char* uid, uint32_t *acl)
         goto END;
     }
     memcpy(zmq_msg_data(&request), uid, uidlen);
+    */
+    zmq_msg_t request;
+    err = str_to_msg(uid, &request);
+    if (err != 0)
+    {
+        zmq_msg_close(&request);
+        goto END;
+    }
     err = zmq_send(requester, &request, 0);
     if (err != 0)
     {
@@ -443,6 +471,19 @@ int main(int argc, char *argv[])
 
     s_catch_signals();
 
+    void *zmq_context_main = zmq_init(ZMQ_NUM_IOTHREADS);
+    void *publisher = zmq_socket(zmq_context_main, ZMQ_PUB);
+    error = zmq_bind(publisher, ZMQ_ANNOUNCER_ADDRESS);
+    if (error != 0)
+    {
+        printf("zmq_bind failed with %s\n", zmq_strerror(zmq_errno()));
+        zmq_term(zmq_context_main);
+        nfc_close (device);
+        nfc_exit(nfc_ctx);
+        return 1;
+    }
+
+
     // Mainloop
     MifareTag *tags = NULL;
     while(!s_interrupted)
@@ -559,7 +600,11 @@ int main(int argc, char *argv[])
         usleep(500 * 1000);
     }
 
+    zmq_close(publisher);
+    zmq_term(zmq_context_main);
+
     nfc_close (device);
     nfc_exit(nfc_ctx);
+
     exit(EXIT_SUCCESS);
 }
