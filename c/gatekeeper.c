@@ -24,7 +24,6 @@
 #define ZMQ_DB_ORACLE_ADDRESS "tcp://localhost:7070"
 #define ZMQ_ANNOUNCER_ADDRESS "tcp://*:7071"
 #define REQUIRE_ACL 0x1
-#define MY_ANNOUNCE_TOPIC "tagresult"
 
 
 // Catch SIGINT and SIGTERM so we can do a clean exit
@@ -77,35 +76,23 @@ int zmq_publish_result(void* publisher, char* uid, char* result)
 {
     int err;
     zmq_msg_t msgpart;
-    err = str_to_msg(MY_ANNOUNCE_TOPIC, &msgpart);
-    if (err != 0)
-    {
-        zmq_msg_close(&msgpart);
-        return err;
-    }
-    err = zmq_send(publisher, &msgpart, ZMQ_SNDMORE);
-    zmq_msg_close(&msgpart);
-    if (err != 0)
-    {
-        printf("ERROR: zmq_send failed with %s\n", zmq_strerror(zmq_errno()));
-        return err;
-    }
-
-    err = str_to_msg(uid, &msgpart);
-    if (err != 0)
-    {
-        zmq_msg_close(&msgpart);
-        return err;
-    }
-    err = zmq_send(publisher, &msgpart, ZMQ_SNDMORE);
-    zmq_msg_close(&msgpart);
-    if (err != 0)
-    {
-        printf("ERROR: zmq_send failed with %s\n", zmq_strerror(zmq_errno()));
-        return err;
-    }
-
+    // use the result as topic
     err = str_to_msg(result, &msgpart);
+    if (err != 0)
+    {
+        zmq_msg_close(&msgpart);
+        return err;
+    }
+    err = zmq_send(publisher, &msgpart, ZMQ_SNDMORE);
+    zmq_msg_close(&msgpart);
+    if (err != 0)
+    {
+        printf("ERROR: zmq_send failed with %s\n", zmq_strerror(zmq_errno()));
+        return err;
+    }
+
+    // And UID as the message
+    err = str_to_msg(uid, &msgpart);
     if (err != 0)
     {
         zmq_msg_close(&msgpart);
@@ -118,6 +105,7 @@ int zmq_publish_result(void* publisher, char* uid, char* result)
         printf("ERROR: zmq_send failed with %s\n", zmq_strerror(zmq_errno()));
         return err;
     }
+
     return 0;
 }
 
@@ -519,6 +507,7 @@ int main(int argc, char *argv[])
     if (error != 0)
     {
         printf("zmq_bind failed with %s\n", zmq_strerror(zmq_errno()));
+        zmq_close(publisher);
         zmq_term(zmq_context_main);
         nfc_close (device);
         nfc_exit(nfc_ctx);
