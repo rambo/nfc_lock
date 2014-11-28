@@ -23,7 +23,10 @@ if __name__ == '__main__':
     context = zmq.Context()
     socket = context.socket(zmq.SUB)
     socket.connect(config['gatekeeper_socket'])
-    socket.setsockopt(zmq.SUBSCRIBE, 'tagresult')
+    #subsribe single topic
+    #socket.setsockopt(zmq.SUBSCRIBE, 'tagresult')
+    #subscribe all topics
+    socket.setsockopt(zmq.SUBSCRIBE, '')
 
     stream = ZMQStream(socket)
     stream.on_recv(stream_recv_callback)
