@@ -276,6 +276,7 @@ RETRY:
     {
         switch (err)
         {
+            // TODO: configure these magic numbers as constants or enum
             case -3:
                 // Revoked!
                 // TODO: Overwrite the card ACL to 0x0
@@ -328,6 +329,12 @@ RETRY:
     if (db_acl & REQUIRE_ACL)
     {
         *tag_valid = true;
+        err = 0;
+    }
+    else
+    {
+        // Valid card but ACL not granted
+        err = -4;
     }
     // All checks done seems good
     if (realuid_str)
@@ -336,7 +343,7 @@ RETRY:
         realuid_str = NULL;
     }
     mifare_desfire_disconnect(tag);
-    return 0;
+    return err;
 FAIL:
     if (realuid_str)
     {
@@ -513,12 +520,28 @@ int main(int argc, char *argv[])
 
             if (tagdata.err != 0)
             {
+                // Extra safety, we actually set this value already in the thread
                 tagdata.tag_valid = false;
+                // Announce the problem vai ZMQ
+                // TODO: configure these magic numbers as constants or enum
+                switch (tagdata.err)
+                {
+                    case -3:
+                        // Revoked tag
+                        break;
+                    case -2:
+                        // Unknown tag
+                        break;
+                    case -4:
+                        // ACL not granted
+                        break;
+                }
                 continue;
             }
             if (tagdata.tag_valid)
             {
                 valid_found = true;
+                // Announce valid card via ZMQ
             }
         }
         freefare_free_tags(tags);
