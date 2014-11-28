@@ -190,6 +190,18 @@ func main() {
         acl_write_key := helpers.Bytes2aeskey(acl_write_bytes)
 
 
+        /**
+         * Enable this only when 100% everything else works perfectly    
+         */
+        fmt.Println("Enabling random ID");
+        error = desfiretag.SetConfiguration(false, true)
+        if error != nil {
+            panic(error)
+        }
+        fmt.Println("Done");
+        /*
+         */
+
         // Start working...
         fmt.Println("Changing default master key");
         error = desfiretag.ChangeKey(0, *new_master_key, *defaultkey);
@@ -197,6 +209,8 @@ func main() {
             panic(error)
         }
         fmt.Println("Done");
+
+
 
         fmt.Println("Creating application");
         // Settings are: only master key may change other keys, configuration is not locked, authentication required for everything, AMK change allowed
@@ -281,18 +295,6 @@ func main() {
         }
         fmt.Println("Done");
          */
-
-
-        /**
-         * Enable this only when 100% everything else works perfectly    
-        fmt.Println("Enabling random ID");
-        error = desfiretag.SetConfiguration(false, true)
-        if error != nil {
-            panic(error)
-        }
-        fmt.Println("Done");
-         */
-
 
         fmt.Println("Disconnecting");
         error = desfiretag.Disconnect()
