@@ -73,6 +73,54 @@ int str_to_msg(char* send, zmq_msg_t* msg)
     return 0;
 }
 
+int zmq_publish_result(void* publisher, char* uid, char* result)
+{
+    int err;
+    zmq_msg_t msgpart;
+    err = str_to_msg(MY_ANNOUNCE_ID, &msgpart);
+    if (err != 0)
+    {
+        zmq_msg_close(&msgpart);
+        return err;
+    }
+    err = zmq_send(publisher, &msgpart, ZMQ_SNDMORE);
+    zmq_msg_close(&msgpart);
+    if (err != 0)
+    {
+        printf("ERROR: zmq_send failed with %s\n", zmq_strerror(zmq_errno()));
+        return err;
+    }
+
+    err = str_to_msg(uid, &msgpart);
+    if (err != 0)
+    {
+        zmq_msg_close(&msgpart);
+        return err;
+    }
+    err = zmq_send(publisher, &msgpart, ZMQ_SNDMORE);
+    zmq_msg_close(&msgpart);
+    if (err != 0)
+    {
+        printf("ERROR: zmq_send failed with %s\n", zmq_strerror(zmq_errno()));
+        return err;
+    }
+
+    err = str_to_msg(result, &msgpart);
+    if (err != 0)
+    {
+        zmq_msg_close(&msgpart);
+        return err;
+    }
+    err = zmq_send(publisher, &msgpart, 0);
+    zmq_msg_close(&msgpart);
+    if (err != 0)
+    {
+        printf("ERROR: zmq_send failed with %s\n", zmq_strerror(zmq_errno()));
+        return err;
+    }
+    return 0;
+}
+
 
 /**
  * Checks the given uid against the db oracle
@@ -92,17 +140,6 @@ int uid_valid(char* uid, uint32_t *acl)
         goto END;
     }
 
-    /*
-    zmq_msg_t request;
-    int uidlen = strlen(uid);
-    err = zmq_msg_init_size(&request, uidlen);
-    if (err != 0)
-    {
-        printf("ERROR: zmq_msg_init_size failed with %s\n", zmq_strerror(zmq_errno()));
-        goto END;
-    }
-    memcpy(zmq_msg_data(&request), uid, uidlen);
-    */
     zmq_msg_t request;
     err = str_to_msg(uid, &request);
     if (err != 0)
@@ -204,7 +241,7 @@ END:
     return err;
 }
 
-int handle_tag(MifareTag tag, bool *tag_valid)
+int handle_tag(MifareTag tag, bool *tag_valid, void* publisher)
 {
     const uint8_t errlimit = 3;
     int err = 0;
@@ -309,12 +346,14 @@ RETRY:
                 // Revoked!
                 // TODO: Overwrite the card ACL to 0x0
                 printf("REVOKED card\n");
+                zmq_publish_result(publisher, realuid_str, "REVOKED");
                 goto FAIL;
                 break;
             case -2:
                 // Unknown card
                 // PONDER: Should we overwrite the ACL here too ? probably...
                 printf("Unknown card\n");
+                zmq_publish_result(publisher, realuid_str, "UNKNOWN");
                 goto FAIL;
                 break;
             default:
@@ -358,10 +397,12 @@ RETRY:
     {
         *tag_valid = true;
         err = 0;
+        zmq_publish_result(publisher, realuid_str, "OK");
     }
     else
     {
         // Valid card but ACL not granted
+        zmq_publish_result(publisher, realuid_str, "REFUSED");
         err = -4;
     }
     // All checks done seems good
@@ -394,6 +435,7 @@ struct thread_data {
    MifareTag tag;
    bool tag_valid;
    int  err;
+   void* zmq_socket;
 };
 
 void *handle_tag_pthread(void *threadarg)
@@ -406,7 +448,7 @@ void *handle_tag_pthread(void *threadarg)
     struct thread_data *my_data;
     my_data = (struct thread_data *) threadarg;
     // Start processing
-    my_data->err = handle_tag(my_data->tag, &my_data->tag_valid);
+    my_data->err = handle_tag(my_data->tag, &my_data->tag_valid, my_data->zmq_socket);
 
     // Signal done and return
     pthread_cond_signal(&tag_done);
@@ -534,6 +576,7 @@ int main(int argc, char *argv[])
             // Use this struct to pass data between thread and main
             struct thread_data tagdata;
             tagdata.tag = tags[i];
+            tagdata.zmq_socket = &publisher;
         
             err = pthread_create(&tid, NULL, handle_tag_pthread, (void *)&tagdata);
             if (err != 0)
@@ -563,26 +606,11 @@ int main(int argc, char *argv[])
             {
                 // Extra safety, we actually set this value already in the thread
                 tagdata.tag_valid = false;
-                // Announce the problem vai ZMQ
-                // TODO: configure these magic numbers as constants or enum
-                switch (tagdata.err)
-                {
-                    case -3:
-                        // Revoked tag
-                        break;
-                    case -2:
-                        // Unknown tag
-                        break;
-                    case -4:
-                        // ACL not granted
-                        break;
-                }
                 continue;
             }
             if (tagdata.tag_valid)
             {
                 valid_found = true;
-                // Announce valid card via ZMQ
             }
         }
         freefare_free_tags(tags);
