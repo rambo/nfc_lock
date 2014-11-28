@@ -19,7 +19,7 @@
 #include "smart_node_config.h"
 #include "keydiversification.h"
 
-#define ZMQ_NUM_IOTHREADS 1
+#define ZMQ_NUM_IOTHREADS 5
 #define ZMQ_DB_ORACLE_ADDRESS "tcp://localhost:7070"
 // TODO: Configure this in a saner location
 #define REQUIRE_ACL 0x1
@@ -64,8 +64,8 @@ int uid_valid(char* uid, uint32_t *acl)
 {
     int err;
     int card_ret = -1;
-    void *context = zmq_init(ZMQ_NUM_IOTHREADS);
-    void *requester = zmq_socket(context, ZMQ_REQ);
+    void *zmq_context_uidvalid = zmq_init(ZMQ_NUM_IOTHREADS);
+    void *requester = zmq_socket(zmq_context_uidvalid, ZMQ_REQ);
     err = zmq_connect(requester, ZMQ_DB_ORACLE_ADDRESS);
     if (err != 0)
     {
@@ -172,7 +172,7 @@ int uid_valid(char* uid, uint32_t *acl)
     err = card_ret;
 END:
     zmq_close(requester);
-    zmq_term(context);
+    zmq_term(zmq_context_uidvalid);
     return err;
 }
 
