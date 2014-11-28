@@ -1,2 +1,3 @@
 keydb: "../keys.db"
 rep_socket: "tcp://*:7070"
+gatekeeper_socket: "tcp://localhost:7071"

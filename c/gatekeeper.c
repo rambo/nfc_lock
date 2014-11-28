@@ -24,7 +24,7 @@
 #define ZMQ_DB_ORACLE_ADDRESS "tcp://localhost:7070"
 #define ZMQ_ANNOUNCER_ADDRESS "tcp://*:7071"
 #define REQUIRE_ACL 0x1
-#define MY_ANNOUNCE_ID "door:open"
+#define MY_ANNOUNCE_TOPIC "tagresult"
 
 
 // Catch SIGINT and SIGTERM so we can do a clean exit
@@ -77,7 +77,7 @@ int zmq_publish_result(void* publisher, char* uid, char* result)
 {
     int err;
     zmq_msg_t msgpart;
-    err = str_to_msg(MY_ANNOUNCE_ID, &msgpart);
+    err = str_to_msg(MY_ANNOUNCE_TOPIC, &msgpart);
     if (err != 0)
     {
         zmq_msg_close(&msgpart);
@@ -576,7 +576,7 @@ int main(int argc, char *argv[])
             // Use this struct to pass data between thread and main
             struct thread_data tagdata;
             tagdata.tag = tags[i];
-            tagdata.zmq_socket = &publisher;
+            tagdata.zmq_socket = publisher;
         
             err = pthread_create(&tid, NULL, handle_tag_pthread, (void *)&tagdata);
             if (err != 0)
