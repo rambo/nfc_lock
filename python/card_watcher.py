@@ -62,6 +62,7 @@ class card_watcher(object):
         usergpio.set_value(self.config['relay']['pin'], int(state))
 
     def card_seen(self, *args):
+        raise NotImplementedError("Reimplement")
         card_uid = str(args[0])
         #print("Got card %s" % card_uid)
         if self.card_valid(card_uid):
@@ -84,13 +85,8 @@ class card_watcher(object):
             self.log(card_uid, False)
 
     def card_valid(self, card_uid):
-        self.cursor.execute("SELECT card_uid,secure_uid FROM valid_keys WHERE card_uid=?;", (card_uid.lower(), ) )
-        data = self.cursor.fetchone()
-        if not data:
-            return False
-        # TODO: Query the card for the secure_uid and verify it (probably not doable via the D-Bus interface, btw)
-        return True
-
+        raise NotImplementedError("Reimplement")
+    
     def hook_signals(self):
         """Hooks POSIX signals to correct callbacks, call only from the main thread!"""
         import signal as posixsignal
@@ -99,24 +95,34 @@ class card_watcher(object):
         posixsignal.signal(posixsignal.SIGHUP, self.reload)
 
     def log(self, card_uid, card_valid):
-        self.fobblogdb.save({
+        if not self.fobblogdb:
+            self.reconnect_couchdb()
+            if not self.fobblogdb:
+                return False
+
+        return self.fobblogdb.save({
             "card_uid": card_uid,
             "card_valid": card_valid,
             "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f"),
             "action": self.config['log']['action'],
         })
 
+
+    def reconnect_couchdb(self):
+        self.fobblogdb = None
+        try:
+            couch = couchdb.Server(self.config['log']['server'])
+            self.fobblogdb = couch[self.config['log']['db']]
+        except Exception,e:
+            print("reconnect_couchdb: got e=%s" % repr(e))
+
     def reload(self, *args):
         if self.connection:
             self.connection.close()
         with open(self.config_file) as f:
             self.config = yaml.load(f)
-        self.db_file = self.config['keydb']
-        self.connection = sqlite3.connect(self.db_file, detect_types=sqlite3.PARSE_DECLTYPES)
-        self.cursor = self.connection.cursor()
 
-        couch = couchdb.Server(self.config['log']['server'])
-        self.fobblogdb = couch[self.config['log']['db']]
+        self.reconnect_couchdb()
 
         # Init relay GPIO
         self.set_relay_state(False)
@@ -139,7 +145,7 @@ class card_watcher(object):
     def _on_recv(self, packet):
         topic = packet[0]
         data = packet[1:]
-        print("_on_recv topic=%s, data=%s" % (topic, repr(data))
+        print("_on_recv topic=%s, data=%s" % (topic, repr(data)))
 
     def _get_heartbeat_ms(self):
         k = self.heartbeat_counter % len(self.config['leds']['heartbeat']['time'])
@@ -181,7 +187,7 @@ if __name__ == '__main__':
     from zmq.eventloop import ioloop
     ioloop.install()
     loop = ioloop.IOLoop.instance()
-    instance = keyserver(sys.argv[1], loop)
+    instance = card_watcher(sys.argv[1], loop)
     instance.hook_signals()
     try:
         instance.run()
