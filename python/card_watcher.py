@@ -11,6 +11,7 @@ from zmq.eventloop.zmqstream import ZMQStream
 
 # Reminder:  RPi.GPIO uses /dev/mem and requires root access, so that will not solve our GPIO issue
 import usergpio
+usergpio.FAKE = True
 
 
 class card_watcher(object):
@@ -18,9 +19,6 @@ class card_watcher(object):
     db_file = None
     config_file = None
     config = {}
-    bus = None
-    connection = None
-    cursor = None
     relay_disable_timer = None
     fobblogdb = None
     error_led_timer = None
@@ -33,7 +31,6 @@ class card_watcher(object):
         self.config_file = config_file
         self.mainloop = mainloop
         self.reload()
-        self.bus.add_signal_receiver(handler_function=self.card_seen, dbus_interface="org.nfc_tools.nfcd.NfcDevice", signal_name="targetAdded")
         print("Initialized")
 
     def disable_ok_led(self, *args):
@@ -122,8 +119,6 @@ class card_watcher(object):
             print("reconnect_couchdb: got e=%s" % repr(e))
 
     def reload(self, *args):
-        if self.connection:
-            self.connection.close()
         with open(self.config_file) as f:
             self.config = yaml.load(f)
 
@@ -159,7 +154,8 @@ class card_watcher(object):
     def start_heartbeat(self):
         self.heartbeat_counter = 0
         usergpio.set_value(self.config['leds']['heartbeat']['pin'], 1)
-        self.heart_led_timer = gobject.timeout_add(self._get_heartbeat_ms(), self.heartbeat_callback)
+        self.heart_led_timer = ioloop.DelayedCallback(self.heartbeat_callback, self._get_heartbeat_ms())
+        self.heart_led_timer.start()
 
     def heartbeat_callback(self, *args):
         self.heartbeat_counter += 1
@@ -168,7 +164,8 @@ class card_watcher(object):
             usergpio.set_value(self.config['leds']['heartbeat']['pin'], 0)
         else:
             usergpio.set_value(self.config['leds']['heartbeat']['pin'], 1)
-        self.heart_led_timer = gobject.timeout_add(self._get_heartbeat_ms(), self.heartbeat_callback)
+        self.heart_led_timer = ioloop.DelayedCallback(self.heartbeat_callback, self._get_heartbeat_ms())
+        self.heart_led_timer.start()
         # TODO: we should probably zero out the hearbeat counter every once in a while
         if self.heartbeat_counter >= len(self.config['leds']['heartbeat']['time']):
             self.heartbeat_counter = 0
