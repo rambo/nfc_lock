@@ -16,9 +16,9 @@ usergpio.FAKE = True
 
 class card_watcher(object):
     mainloop = None
-    db_file = None
     config_file = None
     config = {}
+    zmq_context = None
     relay_disable_timer = None
     fobblogdb = None
     error_led_timer = None
@@ -58,32 +58,6 @@ class card_watcher(object):
         #print("calling usergpio.set_value(%s, %s)" % (self.config['relay']['pin'], int(state)))
         usergpio.set_value(self.config['relay']['pin'], int(state))
 
-    def card_seen(self, *args):
-        raise NotImplementedError("Reimplement")
-        card_uid = str(args[0])
-        #print("Got card %s" % card_uid)
-        if self.card_valid(card_uid):
-            print("Card %s valid, activating relay for %d seconds" % (card_uid, self.config['relay']['time']))
-            if self.relay_disable_timer:
-                gobject.source_remove(self.relay_disable_timer)
-            self.set_relay_state(True)
-            self.relay_disable_timer = gobject.timeout_add(int(self.config['relay']['time']*1000), self.disable_relay)
-            
-            usergpio.set_value(self.config['leds']['ok']['pin'], 1)
-            self.ok_led_timer = gobject.timeout_add(int(self.config['leds']['ok']['time']*1000), self.disable_ok_led)
-
-            self.log(card_uid, True)
-        else:
-            print("Card %s not valid" % card_uid)
-
-            usergpio.set_value(self.config['leds']['error']['pin'], 1)
-            self.error_led_timer = gobject.timeout_add(int(self.config['leds']['error']['time']*1000), self.disable_error_led)
-
-            self.log(card_uid, False)
-
-    def card_valid(self, card_uid):
-        raise NotImplementedError("Reimplement")
-    
     def hook_signals(self):
         """Hooks POSIX signals to correct callbacks, call only from the main thread!"""
         import signal as posixsignal
@@ -131,6 +105,9 @@ class card_watcher(object):
         for k in self.config['leds']:
             usergpio.set_value(self.config['leds'][k]['pin'], 0)
 
+        if self.zmq_context:
+            self.zmq_context.destroy()
+            self.zmq_context = None
         self.zmq_context = zmq.Context()
         self.zmq_socket = self.zmq_context.socket(zmq.SUB)
         self.zmq_socket.connect(self.config['gatekeeper_socket'])
@@ -145,7 +122,30 @@ class card_watcher(object):
     def _on_recv(self, packet):
         topic = packet[0]
         data = packet[1:]
+
         print("_on_recv topic=%s, data=%s" % (topic, repr(data)))
+
+        if topic == "OK":
+            self.valid_card_seen(data[0])
+            return
+
+        # Other results are failures
+        print("Card %s not valid (reason: %s)" % (data[0], topic))
+        usergpio.set_value(self.config['leds']['error']['pin'], 1)
+        self.error_led_timer = ioloop.DelayedCallback(self.disable_error_led, int(self.config['leds']['error']['time']*1000))
+        self.log(data[0], topic)
+
+    def valid_card_seen(self, card_uid):
+        print("Card %s valid, activating relay for %d seconds" % (card_uid, self.config['relay']['time']))
+        if self.relay_disable_timer:
+            self.relay_disable_timer.stop()
+        self.set_relay_state(True)
+        self.relay_disable_timer = ioloop.DelayedCallback(self.disable_relay, int(self.config['relay']['time']*1000))
+        
+        usergpio.set_value(self.config['leds']['ok']['pin'], 1)
+        self.ok_led_timer = ioloop.DelayedCallback(self.disable_ok_led, int(self.config['leds']['ok']['time']*1000))
+
+        self.log(card_uid, "OK")
 
     def _get_heartbeat_ms(self):
         k = self.heartbeat_counter % len(self.config['leds']['heartbeat']['time'])
@@ -172,7 +172,8 @@ class card_watcher(object):
 
     def quit(self, *args):
         # This will close the sockets too
-        self.zmq_context.destroy()
+        if self.zmq_context:
+            self.zmq_context.destroy()
         self.mainloop.stop()
 
     def run(self):
