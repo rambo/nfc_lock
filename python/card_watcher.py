@@ -100,13 +100,17 @@ class card_watcher(object):
             if not self.fobblogdb:
                 return False
 
-        return self.fobblogdb.save({
-            "card_uid": card_uid,
-            "card_valid": card_valid,
-            "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f"),
-            "action": self.config['log']['action'],
-        })
-
+        try:
+            return self.fobblogdb.save({
+                "card_uid": card_uid,
+                "card_valid": card_valid,
+                "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f"),
+                "action": self.config['log']['action'],
+            })
+        except Exception,e:
+            # TODO: catch couchdb/socket errors only
+            print("log: got e=%s" % repr(e))
+            return False
 
     def reconnect_couchdb(self):
         self.fobblogdb = None
@@ -114,6 +118,7 @@ class card_watcher(object):
             couch = couchdb.Server(self.config['log']['server'])
             self.fobblogdb = couch[self.config['log']['db']]
         except Exception,e:
+            # TODO: catch socket errors only
             print("reconnect_couchdb: got e=%s" % repr(e))
 
     def reload(self, *args):
