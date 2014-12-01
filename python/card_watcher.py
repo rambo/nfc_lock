@@ -3,28 +3,11 @@
 from __future__ import with_statement
 import sys,os
 from exceptions import NotImplementedError,RuntimeError,KeyboardInterrupt
-import sqlite3
-# Decimal recipe from http://stackoverflow.com/questions/6319409/how-to-convert-python-decimal-to-sqlite-numeric
-#import decimal
-# Register the adapter
-#sqlite3.register_adapter(decimal.Decimal, lambda d: str(d))
-# Register the converter
-#sqlite3.register_converter("NUMERIC", lambda s: decimal.Decimal(s))
-# Register converter&adapter for datetime in the same way
-import datetime
-sqlite3.register_adapter(datetime.datetime, lambda dt: dt.strftime("%Y-%m-%d %H:%M:%S.%f")[:23])
-# The type on SQLite is "TIMESTAMP" even if we specified "DATETIME" in table creation...
-sqlite3.register_converter("TIMESTAMP", lambda s: datetime.datetime.strptime(s.ljust(26,"0"), "%Y-%m-%d %H:%M:%S.%f"))
 
-## db init example
-# sqlite3 keys.db
-# CREATE TABLE valid_keys (card_uid TEXT NOT NULL, secure_uid TEXT NOT NULL);
-# INSERT INTO valid_keys (card_uid, secure_uid) VALUES ("YOUR_UID_HERE", "NA");
-
-import dbus
-import gobject
 import yaml
 import couchdb
+import zmq
+from zmq.eventloop.zmqstream import ZMQStream
 
 # Reminder:  RPi.GPIO uses /dev/mem and requires root access, so that will not solve our GPIO issue
 import usergpio
@@ -46,10 +29,9 @@ class card_watcher(object):
     heartbeat_counter = 0
     
 
-    def __init__(self, config_file, mainloop, bus):
+    def __init__(self, config_file, mainloop):
         self.config_file = config_file
         self.mainloop = mainloop
-        self.bus = bus
         self.reload()
         self.bus.add_signal_receiver(handler_function=self.card_seen, dbus_interface="org.nfc_tools.nfcd.NfcDevice", signal_name="targetAdded")
         print("Initialized")
@@ -142,10 +124,22 @@ class card_watcher(object):
         # Turn the LEDs off (and init the gpio for them)
         for k in self.config['leds']:
             usergpio.set_value(self.config['leds'][k]['pin'], 0)
-        
+
+        self.zmq_context = zmq.Context()
+        self.zmq_socket = self.zmq_context.socket(zmq.SUB)
+        self.zmq_socket.connect(self.config['gatekeeper_socket'])
+        #subscribe all topics
+        self.zmq_socket.setsockopt(zmq.SUBSCRIBE, '')
+        self.zmq_stream = ZMQStream(self.zmq_socket)
+        self.zmq_stream.on_recv(self._on_recv)
+
         self.start_heartbeat()
         print("Config (re-)loaded")
-        
+
+    def _on_recv(self, packet):
+        topic = packet[0]
+        data = packet[1:]
+        print("_on_recv topic=%s, data=%s" % (topic, repr(data))
 
     def _get_heartbeat_ms(self):
         k = self.heartbeat_counter % len(self.config['leds']['heartbeat']['time'])
@@ -169,11 +163,13 @@ class card_watcher(object):
             self.heartbeat_counter = 0
 
     def quit(self, *args):
-        self.mainloop.quit()
+        # This will close the sockets too
+        self.zmq_context.destroy()
+        self.mainloop.stop()
 
     def run(self):
         print("Starting mainloop")
-        self.mainloop.run()
+        self.mainloop.start()
 
 
 
@@ -182,12 +178,10 @@ if __name__ == '__main__':
         print("Usage: card_watcher.py config.yml")
         sys.exit(1)
 
-    from dbus.mainloop.glib import DBusGMainLoop
-    DBusGMainLoop(set_as_default=True)
-    system_bus = dbus.SystemBus()
-    loop = gobject.MainLoop()
-    
-    instance = card_watcher(sys.argv[1], loop, system_bus)
+    from zmq.eventloop import ioloop
+    ioloop.install()
+    loop = ioloop.IOLoop.instance()
+    instance = keyserver(sys.argv[1], loop)
     instance.hook_signals()
     try:
         instance.run()

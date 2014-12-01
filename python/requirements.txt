@@ -1,2 +1,4 @@
 PyYAML==3.11
 tornado==4.0.2
+pyzmq==14.0.1
+CouchDB==1.0

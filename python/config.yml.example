@@ -1,3 +1,20 @@
 keydb: "../keys.db"
 rep_socket: "tcp://*:7070"
 gatekeeper_socket: "tcp://localhost:7071"
+relay:
+    pin: 23 # BCM channel, not raspi header pin
+    time: 5.0 # Seconds
+leds:
+    heartbeat:
+        pin: 17 # BCM channel, not raspi heade pin
+        time: [ 0.1, 0.2, 0.1, 4.0 ] # Seconds: on-time, off-time, on-time, off-time (and loop)
+    ok:
+        pin: 21
+        time: 2.0 # Seconds (on-time)
+    error:
+        pin: 22
+        time: 2.0
+log: # Used to define CouchDB server and database used with the python bindings
+    server: "http://user:pass@127.0.0.1:5984/"
+    db: "foblog"
+    action: "open:door"
