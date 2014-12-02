@@ -11,7 +11,7 @@ from zmq.eventloop.zmqstream import ZMQStream
 
 # Reminder:  RPi.GPIO uses /dev/mem and requires root access, so that will not solve our GPIO issue
 import usergpio
-usergpio.FAKE = True
+#usergpio.FAKE = True
 
 
 class card_watcher(object):
