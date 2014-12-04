@@ -30,7 +30,7 @@ CFLAGS_WITH_PTHREAD = $(CFLAGS) -pthread
 CFLAGS_WITH_ZMQ = $(shell pkg-config --cflags libzmq) $(CFLAGS) 
 LIBS_WITH_ZMQ = $(shell pkg-config --libs libzmq) $(LIBS) 
 
-CFLAGS	+= -g $(shell pkg-config --cflags libfreefare openssl)
+CFLAGS	+= -g $(shell pkg-config --cflags libfreefare openssl) -lrt
 LDFLAGS	+= -g
 LIBS 	+= $(shell pkg-config --libs libfreefare openssl) 
 
