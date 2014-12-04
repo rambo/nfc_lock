@@ -21,6 +21,7 @@ func main() {
         os.Exit(1)
     }
 
+    // This bugs out at least for 1001-1004 (results in 2028-2025)
     newmid64, error := strconv.ParseUint(os.Args[1], 10, 16)
     if (error != nil) {
          panic(error)
