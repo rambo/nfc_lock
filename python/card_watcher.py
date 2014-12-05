@@ -133,6 +133,7 @@ class card_watcher(object):
         print("Card %s not valid (reason: %s)" % (data[0], topic))
         usergpio.set_value(self.config['leds']['error']['pin'], 1)
         self.error_led_timer = ioloop.DelayedCallback(self.disable_error_led, int(self.config['leds']['error']['time']*1000))
+        self.error_led_timer.start()
         self.log(data[0], topic)
 
     def valid_card_seen(self, card_uid):
@@ -141,9 +142,11 @@ class card_watcher(object):
             self.relay_disable_timer.stop()
         self.set_relay_state(True)
         self.relay_disable_timer = ioloop.DelayedCallback(self.disable_relay, int(self.config['relay']['time']*1000))
+        self.relay_disable_timer.start()
         
         usergpio.set_value(self.config['leds']['ok']['pin'], 1)
         self.ok_led_timer = ioloop.DelayedCallback(self.disable_ok_led, int(self.config['leds']['ok']['time']*1000))
+        self.ok_led_timer.start()
 
         self.log(card_uid, "OK")
 
