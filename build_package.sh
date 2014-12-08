@@ -18,4 +18,5 @@ cp -aux bash/sync_keydb.sh build/opt/nfc_lock/bin/
 cp -aux upstart/*.conf build/etc/init/
 cd build
 tar -cvzf ../nfc_lock-`uname -m`-`date +%Y%m%d_%H%M`.tar.gz ./
+cd ..
 rm -rf build
