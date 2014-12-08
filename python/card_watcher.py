@@ -123,7 +123,7 @@ class card_watcher(object):
         topic = packet[0]
         data = packet[1:]
 
-        print("_on_recv topic=%s, data=%s" % (topic, repr(data)))
+        #print("_on_recv topic=%s, data=%s" % (topic, repr(data)))
 
         if topic == "OK":
             self.valid_card_seen(data[0])

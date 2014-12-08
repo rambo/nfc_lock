@@ -63,7 +63,7 @@ class keyserver(object):
         print("Config (re-)loaded")
 
     def _on_recv(self, data, *args, **kwargs):
-        print("_on_recv: data=%s" % repr(data))
+        #print("_on_recv: data=%s" % repr(data))
         if len(data) != 1:
             self.zmq_stream.send_multipart(["INV", "0x0"]) # Invalid request
             return
