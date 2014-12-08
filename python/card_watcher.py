@@ -4,6 +4,7 @@ from __future__ import with_statement
 import sys,os
 from exceptions import NotImplementedError,RuntimeError,KeyboardInterrupt
 
+import datetime
 import yaml
 import couchdb
 import zmq
