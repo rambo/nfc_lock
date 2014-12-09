@@ -15,6 +15,10 @@ KEYDIVERSIFICATION_TEST_SRC = keydiversification.c keydiversification_test.c
 PROGRAMS += read_personalized
 READ_PRESONALIZED_SRC = keydiversification.c read_personalized.c
 
+PROGRAMS += pre_personalize
+PRE_PRESONALIZE_SRC = keydiversification.c pre_personalize.c
+
+
 PROGRAMS += pthread_example
 PTHREAD_EXAMPLE_SRC = pthread_example.c
 
@@ -44,6 +48,9 @@ keydiversification_test: $(KEYDIVERSIFICATION_TEST_SRC)
 
 read_personalized: $(READ_PERSONALIZED_SRC)
 	$(CC) $(READ_PRESONALIZED_SRC) $(CFLAGS_WITH_PTHREAD) $(LDFLAGS) -o $@ $(LIBS)
+
+pre_personalize: $(PRE_PRESONALIZE_SRC)
+	$(CC) $(PRE_PRESONALIZE_SRC) $(CFLAGS_WITH_PTHREAD) $(LDFLAGS) -o $@ $(LIBS)
 
 pthread_example: $(PTHREAD_EXAMPLE_SRC)
 	$(CC) $(PTHREAD_EXAMPLE_SRC) $(CFLAGS_WITH_PTHREAD) $(LDFLAGS) -o $@ $(LIBS)
