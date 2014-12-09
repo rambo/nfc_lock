@@ -20,7 +20,10 @@
 
 
 uint8_t key_data_null[8]  = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
-MifareDESFireKey nullkey;
+MifareDESFireKey null_des_key;
+
+uint8_t key_data_null16[16]  = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+MifareDESFireKey null_aes_key;
 
 
 uint8_t applicationsettings(uint8_t accesskey, bool frozen, bool req_auth_fileops, bool req_auth_dir, bool allow_master_key_chg)
@@ -74,9 +77,9 @@ int handle_tag(MifareTag tag, bool *tag_valid)
     bool connected = false;
     MifareDESFireKey key;
     char *realuid_str = NULL;
-    /*
     MifareDESFireAID aid;
     uint8_t diversified_key_data[16];
+    /*
     uint8_t aclbytes[4];
     uint32_t acl;
     uint8_t midbytes[2];
@@ -99,7 +102,7 @@ RETRY:
             printf("failed (%s), retry-limit exceeded (%d/%d), skipping tag\n", errstr, errcnt, errlimit);
             goto FAIL;
         }
-        printf("failed (%s), retrying (%d)\n", errstr, errcnt);
+        printf("failed (%s), retrying (%d)\n", freefare_strerror(tag), errcnt);
     }
     if (connected)
     {
@@ -118,7 +121,7 @@ RETRY:
     connected = true;
 
     printf("Authenticating (null key), ");
-    err = mifare_desfire_authenticate(tag, 0x0, nullkey);
+    err = mifare_desfire_authenticate(tag, 0x0, null_des_key);
     if (err < 0)
     {
         goto RETRY;
@@ -129,9 +132,17 @@ RETRY:
      * TODO: enable random id here
      */
 
+    printf("Getting real UID, ");
+    err = mifare_desfire_get_card_uid(tag, &realuid_str);
+    if (err < 0)
+    {
+        goto RETRY;
+    }
+    printf("%s\n", realuid_str);
+
     printf("Changing Card Master Key, ");
     key = mifare_desfire_aes_key_new_with_version((uint8_t*)&nfclock_cmk, 0x0);
-    err = mifare_desfire_change_key(tag, 0, key, nullkey);
+    err = mifare_desfire_change_key(tag, 0, key, null_des_key);
     if (err < 0)
     {
         free(key);
@@ -142,11 +153,10 @@ RETRY:
     key = NULL;
     printf("done\n");
 
-/*
     printf("Creating application, ");
     aid = mifare_desfire_aid_new(nfclock_aid[0] | (nfclock_aid[1] << 8) | (nfclock_aid[2] << 16));
-    // Settings are: only master key may change other keys, configuration is not locked, authentication required for everything, AMK change allowed and we have 6 keys in the application
-    err = mifare_desfire_create_application_aes(tag, aid, applicationsettings(0, false, true, false, true), 6);
+    // Settings are: only master key may change other keys, configuration is not locked, authentication required for everything, AMK change allowed and we have 4 keys in the application
+    err = mifare_desfire_create_application_aes(tag, aid, applicationsettings(0, false, true, true, true), 4);
     if (err < 0)
     {
         free(aid);
@@ -157,49 +167,104 @@ RETRY:
     free(aid);
     aid = NULL;
 
-    printf("Authenticating, ");
-    key = mifare_desfire_aes_key_new_with_version((uint8_t*)&nfclock_uid_key, 0x0);
-    err = mifare_desfire_authenticate(tag, nfclock_uid_keyid, key);
+    printf("Selecting application, ");
+    aid = mifare_desfire_aid_new(nfclock_aid[0] | (nfclock_aid[1] << 8) | (nfclock_aid[2] << 16));
+    err = mifare_desfire_select_application(tag, aid);
+    if (err < 0)
+    {
+        free(aid);
+        aid = NULL;
+        goto RETRY;
+    }
+    printf("done\n");
+    free(aid);
+    aid = NULL;
+
+    printf("Re-Authenticating (null AES key), ");
+    err = mifare_desfire_authenticate_aes(tag, 0, null_aes_key);
+    if (err < 0)
+    {
+        goto RETRY;
+    }
+    printf("done\n");
+
+    printf("Changing Application Master Key, ");
+    key = mifare_desfire_aes_key_new_with_version((uint8_t*)&nfclock_amk, 0x0);
+    err = mifare_desfire_change_key(tag, 0, key, null_des_key);
     if (err < 0)
     {
         free(key);
         key = NULL;
-        printf("Can't Authenticate. ");
         goto RETRY;
     }
     free(key);
     key = NULL;
     printf("done\n");
 
-    printf("Getting real UID, ");
-    err = mifare_desfire_get_card_uid(tag, &realuid_str);
+    printf("Re-Authenticating (AMK), ");
+    key = mifare_desfire_aes_key_new_with_version((uint8_t*)&nfclock_amk, 0x0);
+    err = mifare_desfire_authenticate_aes(tag, 0, key);
     if (err < 0)
     {
-        printf("Can't get real UID. ");
         goto RETRY;
     }
-    printf("%s\n", realuid_str);
+    printf("done\n");
+
+    printf("Changing UID read key, ");
+    key = mifare_desfire_aes_key_new_with_version((uint8_t*)&nfclock_uid_key, 0x0);
+    err = mifare_desfire_change_key(tag, nfclock_uid_keyid, key, null_aes_key);
+    if (err < 0)
+    {
+        free(key);
+        key = NULL;
+        goto RETRY;
+    }
+    free(key);
+    key = NULL;
+    printf("done\n");
+
 
     err = nfclock_diversify_key_aes128((uint8_t *)nfclock_acl_read_key_base, (uint8_t*)nfclock_aid, realuid_str, (uint8_t*)nfclock_sysid, sizeof(nfclock_sysid), diversified_key_data);
     if (err != 0)
     {
-        printf("Can't calculate diversified key, failing\n");
+        printf("Can't calculate diversified ACL read key, failing\n");
         goto FAIL;
     }
-
-    printf("Re-auth with ACL read key, ");
-    key = mifare_desfire_aes_key_new_with_version((uint8_t*)diversified_key_data, 0x0);
-    err = mifare_desfire_authenticate(tag, nfclock_acl_read_keyid, key);
+    printf("Changing ACL read key, ");
+    key = mifare_desfire_aes_key_new_with_version((uint8_t *)&diversified_key_data, 0x0);
+    err = mifare_desfire_change_key(tag, nfclock_acl_read_keyid, key, null_aes_key);
     if (err < 0)
     {
         free(key);
         key = NULL;
-        printf("Can't Authenticate. ");
         goto RETRY;
     }
     free(key);
     key = NULL;
     printf("done\n");
+
+
+    err = nfclock_diversify_key_aes128((uint8_t *)nfclock_acl_write_key_base, (uint8_t*)nfclock_aid, realuid_str, (uint8_t*)nfclock_sysid, sizeof(nfclock_sysid), diversified_key_data);
+    if (err != 0)
+    {
+        printf("Can't calculate diversified ACL write key, failing\n");
+        goto FAIL;
+    }
+    printf("Changing ACL write key, ");
+    key = mifare_desfire_aes_key_new_with_version((uint8_t *)&diversified_key_data, 0x0);
+    err = mifare_desfire_change_key(tag, nfclock_acl_write_keyid, key, null_aes_key);
+    if (err < 0)
+    {
+        free(key);
+        key = NULL;
+        goto RETRY;
+    }
+    free(key);
+    key = NULL;
+    printf("done\n");
+
+
+/*
 
     printf("Reading ACL file, ");
     err = mifare_desfire_read_data (tag, nfclock_acl_file_id, 0, sizeof(aclbytes), aclbytes);
@@ -333,7 +398,8 @@ int main(int argc, char *argv[])
 
     s_catch_signals();
 
-    nullkey = mifare_desfire_des_key_new_with_version(key_data_null);
+    null_des_key = mifare_desfire_des_key_new_with_version(key_data_null);
+    null_aes_key = mifare_desfire_aes_key_new_with_version(key_data_null16, 0x0);
 
     // Mainloop
     MifareTag *tags = NULL;
@@ -435,7 +501,8 @@ int main(int argc, char *argv[])
         usleep(2500 * 1000);
     }
 
-    free(nullkey);
+    free(null_des_key);
+    free(null_aes_key);
     nfc_close (device);
     nfc_exit(nfc_ctx);
     exit(EXIT_SUCCESS);
