@@ -168,6 +168,14 @@ RETRY:
     key = NULL;
     printf("done\n");
 
+    printf("Setting application default key, ");
+    err = mifare_desfire_set_default_key(tag, null_aes_key);
+    if (err < 0)
+    {
+        goto RETRY;
+    }
+    printf("done\n");
+
     printf("Creating application, ");
     aid = mifare_desfire_aid_new(nfclock_aid[0] | (nfclock_aid[1] << 8) | (nfclock_aid[2] << 16));
     // Settings are: only master key may change other keys, configuration is not locked, authentication required for everything, AMK change allowed and we have 4 keys in the application
@@ -195,7 +203,7 @@ RETRY:
     free(aid);
     aid = NULL;
 
-    /*
+
     printf("Re-Authenticating (null AES key), ");
     err = mifare_desfire_authenticate(tag, 0, null_aes_key);
     if (err < 0)
@@ -203,12 +211,11 @@ RETRY:
         goto RETRY;
     }
     printf("done\n");
-    */
+
 
     printf("Changing Application Master Key, ");
     key = mifare_desfire_aes_key_new_with_version((uint8_t*)&nfclock_amk, 0x0);
-    //err = mifare_desfire_change_key(tag, 0, key, null_aes_key);
-    err = mifare_desfire_set_default_key(tag, key);
+    err = mifare_desfire_change_key(tag, 0, key, null_aes_key);
     if (err < 0)
     {
         free(key);
