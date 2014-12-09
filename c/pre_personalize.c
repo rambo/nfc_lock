@@ -72,7 +72,6 @@ int handle_tag(MifareTag tag, bool *tag_valid)
 {
     const uint8_t errlimit = 3;
     int err = 0;
-    char errstr[] = "";
     uint8_t errcnt = 0;
     bool connected = false;
     MifareDESFireKey key;
@@ -99,7 +98,7 @@ RETRY:
         // TODO: resolve error string
         if (errcnt > errlimit)
         {
-            printf("failed (%s), retry-limit exceeded (%d/%d), skipping tag\n", errstr, errcnt, errlimit);
+            printf("failed (%s), retry-limit exceeded (%d/%d), skipping tag\n", freefare_strerror(tag), errcnt, errlimit);
             goto FAIL;
         }
         printf("failed (%s), retrying (%d)\n", freefare_strerror(tag), errcnt);
