@@ -18,6 +18,8 @@ READ_PRESONALIZED_SRC = keydiversification.c read_personalized.c
 PROGRAMS += pre_personalize
 PRE_PRESONALIZE_SRC = keydiversification.c pre_personalize.c
 
+PROGRAMS += de_personalize
+DE_PRESONALIZE_SRC = keydiversification.c de_personalize.c
 
 PROGRAMS += pthread_example
 PTHREAD_EXAMPLE_SRC = pthread_example.c
@@ -51,6 +53,9 @@ read_personalized: $(READ_PERSONALIZED_SRC)
 
 pre_personalize: $(PRE_PRESONALIZE_SRC)
 	$(CC) $(PRE_PRESONALIZE_SRC) $(CFLAGS_WITH_PTHREAD) $(LDFLAGS) -o $@ $(LIBS)
+
+de_personalize: $(DE_PRESONALIZE_SRC)
+	$(CC) $(DE_PRESONALIZE_SRC) $(CFLAGS_WITH_PTHREAD) $(LDFLAGS) -o $@ $(LIBS)
 
 pthread_example: $(PTHREAD_EXAMPLE_SRC)
 	$(CC) $(PTHREAD_EXAMPLE_SRC) $(CFLAGS_WITH_PTHREAD) $(LDFLAGS) -o $@ $(LIBS)

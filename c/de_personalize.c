@@ -22,31 +22,6 @@
 uint8_t key_data_null[8]  = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 
 
-uint8_t applicationsettings(uint8_t accesskey, bool frozen, bool req_auth_fileops, bool req_auth_dir, bool allow_master_key_chg)
-{
-    uint8_t ret = 0;
-    ret |= accesskey << 4;
-    if (frozen)
-    {
-        ret |= 1 << 3;
-    }
-    if (req_auth_fileops)
-    {
-        ret |= 1 << 2;
-    }
-    if (req_auth_dir)
-    {
-        ret |= 1 << 1;
-    }
-    if (allow_master_key_chg)
-    {
-        ret |= 1;
-    }
-    return ret;
-}
-
-
-
 // Catch SIGINT and SIGTERM so we can do a clean exit
 static int s_interrupted = 0;
 static void s_signal_handler(int signal_value)
@@ -110,14 +85,13 @@ RETRY:
     err = mifare_desfire_connect(tag);
     if (err < 0)
     {
-        printf("Can't connect to Mifare DESFire target.");
         goto RETRY;
     }
     printf("done\n");
     connected = true;
 
-    printf("Authenticating (null key), ");
-    key = mifare_desfire_des_key_new_with_version (key_data_null);
+    printf("Authenticating (master key), ");
+    key = mifare_desfire_aes_key_new_with_version((uint8_t*)&nfclock_cmk, 0x0);
     err = mifare_desfire_authenticate(tag, 0x0, key);
     if (err < 0)
     {
@@ -129,14 +103,10 @@ RETRY:
     key = NULL;
     printf("done\n");
 
-    /**
-     * TODO: enable random id here
-     */
-
-    printf("Changing Card Master Key, ");
+    printf("Changing Card Master Key (to null), ");
     key = mifare_desfire_aes_key_new_with_version((uint8_t*)&nfclock_cmk, 0x0);
     MifareDESFireKey nullkey = mifare_desfire_des_key_new_with_version(key_data_null);
-    err = mifare_desfire_change_key(tag, 0, key, nullkey);
+    err = mifare_desfire_change_key(tag, 0, nullkey, key);
     if (err < 0)
     {
         free(key);
@@ -149,88 +119,28 @@ RETRY:
     key = NULL;
     printf("done\n");
 
-/*
-
-    printf("Creating application, ");
-    aid = mifare_desfire_aid_new(nfclock_aid[0] | (nfclock_aid[1] << 8) | (nfclock_aid[2] << 16));
-    err = mifare_desfire_create_application_aes(tag, aid, applicationsettings(0, false, true, false, true), 6);
-    if (err < 0)
-    {
-        free(aid);
-        aid = NULL;
-        printf("Can't select application.");
-        goto RETRY;
-    }
-    printf("done\n");
-    free(aid);
-    aid = NULL;
-
-    printf("Authenticating, ");
-    key = mifare_desfire_aes_key_new_with_version((uint8_t*)&nfclock_uid_key, 0x0);
-    err = mifare_desfire_authenticate(tag, nfclock_uid_keyid, key);
+    printf("Authenticating (null key), ");
+    key = mifare_desfire_des_key_new_with_version(key_data_null);
+    err = mifare_desfire_authenticate(tag, 0x0, key);
     if (err < 0)
     {
         free(key);
         key = NULL;
-        printf("Can't Authenticate. ");
         goto RETRY;
     }
     free(key);
     key = NULL;
     printf("done\n");
 
-    printf("Getting real UID, ");
-    err = mifare_desfire_get_card_uid(tag, &realuid_str);
+    printf("Formatting, ");
+    err = mifare_desfire_format_picc(tag);
     if (err < 0)
     {
-        printf("Can't get real UID. ");
         goto RETRY;
     }
-    printf("%s\n", realuid_str);
-
-    err = nfclock_diversify_key_aes128((uint8_t *)nfclock_acl_read_key_base, (uint8_t*)nfclock_aid, realuid_str, (uint8_t*)nfclock_sysid, sizeof(nfclock_sysid), diversified_key_data);
-    if (err != 0)
-    {
-        printf("Can't calculate diversified key, failing\n");
-        goto FAIL;
-    }
-
-    printf("Re-auth with ACL read key, ");
-    key = mifare_desfire_aes_key_new_with_version((uint8_t*)diversified_key_data, 0x0);
-    err = mifare_desfire_authenticate(tag, nfclock_acl_read_keyid, key);
-    if (err < 0)
-    {
-        free(key);
-        key = NULL;
-        printf("Can't Authenticate. ");
-        goto RETRY;
-    }
-    free(key);
-    key = NULL;
     printf("done\n");
+    connected = true;
 
-    printf("Reading ACL file, ");
-    err = mifare_desfire_read_data (tag, nfclock_acl_file_id, 0, sizeof(aclbytes), aclbytes);
-    if (err < 0)
-    {
-        printf("got %d as bytes read", err);
-        goto RETRY;
-    }
-    acl = aclbytes[0] | (aclbytes[1] << 8) | (aclbytes[2] << 16) | (aclbytes[3] << 24);
-    printf("done, got 0x%lx \n", (unsigned long)acl);
-
-
-    printf("Reading member-id file, ");
-    err = mifare_desfire_read_data (tag, nfclock_mid_file_id, 0, sizeof(midbytes), midbytes);
-    if (err < 0)
-    {
-        printf("got %d as bytes read", err);
-        goto RETRY;
-    }
-    mid = midbytes[0] | (midbytes[1] << 8);
-    printf("done, got %d \n", mid);
-
-*/
     // All checks done seems good
     if (realuid_str)
     {
@@ -430,14 +340,14 @@ int main(int argc, char *argv[])
         tags = NULL;
         if (valid_found)
         {
-            printf("OK: tag pre-personalized\n");
+            printf("OK: tag formatted\n");
         }
         else
         {
-            printf("ERROR: problem pre-personalizing\n");
+            printf("ERROR: problem formatting\n");
         }
 
-        // And if we had tags then wait half a sec before resuming polling again
+        // And if we had tags then wait a few sec before resuming polling again
         usleep(2500 * 1000);
     }
 
