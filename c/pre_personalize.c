@@ -180,7 +180,7 @@ RETRY:
     aid = NULL;
 
     printf("Re-Authenticating (null AES key), ");
-    err = mifare_desfire_authenticate_aes(tag, 0, null_aes_key);
+    err = mifare_desfire_authenticate(tag, 0, null_aes_key);
     if (err < 0)
     {
         goto RETRY;
