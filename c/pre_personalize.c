@@ -219,7 +219,7 @@ RETRY:
 
     printf("Re-Authenticating (AMK), ");
     key = mifare_desfire_aes_key_new_with_version((uint8_t*)&nfclock_amk, 0x0);
-    err = mifare_desfire_authenticate_aes(tag, 0, key);
+    err = mifare_desfire_authenticate(tag, 0, key);
     if (err < 0)
     {
         goto RETRY;
