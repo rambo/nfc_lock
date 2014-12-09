@@ -20,6 +20,7 @@
 
 
 uint8_t key_data_null[8]  = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+MifareDESFireKey nullkey;
 
 
 uint8_t applicationsettings(uint8_t accesskey, bool frozen, bool req_auth_fileops, bool req_auth_dir, bool allow_master_key_chg)
@@ -117,16 +118,11 @@ RETRY:
     connected = true;
 
     printf("Authenticating (null key), ");
-    key = mifare_desfire_des_key_new_with_version (key_data_null);
-    err = mifare_desfire_authenticate(tag, 0x0, key);
+    err = mifare_desfire_authenticate(tag, 0x0, nullkey);
     if (err < 0)
     {
-        free(key);
-        key = NULL;
         goto RETRY;
     }
-    free(key);
-    key = NULL;
     printf("done\n");
 
     /**
@@ -135,30 +131,26 @@ RETRY:
 
     printf("Changing Card Master Key, ");
     key = mifare_desfire_aes_key_new_with_version((uint8_t*)&nfclock_cmk, 0x0);
-    MifareDESFireKey nullkey = mifare_desfire_des_key_new_with_version(key_data_null);
     err = mifare_desfire_change_key(tag, 0, key, nullkey);
     if (err < 0)
     {
         free(key);
-        free(nullkey);
         key = NULL;
         goto RETRY;
     }
     free(key);
-    free(nullkey);
     key = NULL;
     printf("done\n");
 
 /*
-
     printf("Creating application, ");
     aid = mifare_desfire_aid_new(nfclock_aid[0] | (nfclock_aid[1] << 8) | (nfclock_aid[2] << 16));
+    // Settings are: only master key may change other keys, configuration is not locked, authentication required for everything, AMK change allowed and we have 6 keys in the application
     err = mifare_desfire_create_application_aes(tag, aid, applicationsettings(0, false, true, false, true), 6);
     if (err < 0)
     {
         free(aid);
         aid = NULL;
-        printf("Can't select application.");
         goto RETRY;
     }
     printf("done\n");
@@ -341,6 +333,8 @@ int main(int argc, char *argv[])
 
     s_catch_signals();
 
+    nullkey = mifare_desfire_des_key_new_with_version(key_data_null);
+
     // Mainloop
     MifareTag *tags = NULL;
     while(!s_interrupted)
@@ -441,6 +435,7 @@ int main(int argc, char *argv[])
         usleep(2500 * 1000);
     }
 
+    free(nullkey);
     nfc_close (device);
     nfc_exit(nfc_ctx);
     exit(EXIT_SUCCESS);
