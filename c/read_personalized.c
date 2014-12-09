@@ -66,7 +66,7 @@ RETRY:
             printf("failed (%s), retry-limit exceeded (%d/%d), skipping tag\n", freefare_strerror(tag), errcnt, errlimit);
             goto FAIL;
         }
-        printf("failed (%s), retrying (%d)\n", errstr, errcnt);
+        printf("failed (%s), retrying (%d)\n", freefare_strerror(tag), errcnt);
     }
     if (connected)
     {
