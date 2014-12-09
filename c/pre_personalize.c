@@ -179,7 +179,7 @@ RETRY:
     printf("Creating application, ");
     aid = mifare_desfire_aid_new(nfclock_aid[0] | (nfclock_aid[1] << 8) | (nfclock_aid[2] << 16));
     // Settings are: only master key may change other keys, configuration is not locked, authentication required for everything, AMK change allowed and we have 4 keys in the application
-    err = mifare_desfire_create_application_aes(tag, aid, applicationsettings(0, false, true, true, true), APPLICATION_CRYPTO_AES | 4);
+    err = mifare_desfire_create_application_aes(tag, aid, applicationsettings(0, false, true, true, true), 4);
     if (err < 0)
     {
         free(aid);
