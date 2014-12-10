@@ -10,16 +10,16 @@ PROGRAMS += cmac_example
 CMAC_EXAMPLE_SRC = cmac_example.c
 
 PROGRAMS += keydiversification_test
-KEYDIVERSIFICATION_TEST_SRC = keydiversification.c keydiversification_test.c
+KEYDIVERSIFICATION_TEST_SRC = keydiversification.c helpers.c keydiversification_test.c
 
 PROGRAMS += read_personalized
-READ_PRESONALIZED_SRC = keydiversification.c read_personalized.c
+READ_PRESONALIZED_SRC = keydiversification.c helpers.c read_personalized.c
 
 PROGRAMS += pre_personalize
-PRE_PRESONALIZE_SRC = keydiversification.c pre_personalize.c
+PRE_PRESONALIZE_SRC = keydiversification.c helpers.c pre_personalize.c
 
 PROGRAMS += de_personalize
-DE_PRESONALIZE_SRC = keydiversification.c de_personalize.c
+DE_PRESONALIZE_SRC = keydiversification.c helpers.c de_personalize.c
 
 PROGRAMS += pthread_example
 PTHREAD_EXAMPLE_SRC = pthread_example.c
@@ -28,7 +28,7 @@ PROGRAMS += req_test
 REQ_TEST_SRC = req_test.c
 
 PROGRAMS += gatekeeper
-GATEKEEPER_SRC = keydiversification.c gatekeeper.c
+GATEKEEPER_SRC = keydiversification.c helpers.c gatekeeper.c
 
 
 
