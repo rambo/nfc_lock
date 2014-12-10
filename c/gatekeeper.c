@@ -16,8 +16,13 @@
 #include <freefare.h>
 #include <zmq.h>
 
-#include "smart_node_config.h"
 #include "keydiversification.h"
+#include "smart_node_helpers.h"
+/**
+ * Loaded by smart_node_helpers
+#include "smart_node_config.h"
+ */
+#include "helpers.h"
 
 #define ZMQ_NUM_IOTHREADS 5
 // TODO: Configure these in a saner location
@@ -239,7 +244,6 @@ int handle_tag(MifareTag tag, bool *tag_valid, void* publisher)
     MifareDESFireKey key;
     char *realuid_str = NULL;
     uint8_t diversified_key_data[16];
-    uint8_t aclbytes[4];
     uint32_t acl;
     uint32_t db_acl;
 
@@ -255,7 +259,6 @@ RETRY:
         }
         // TODO: Retry only on RF-errors
         ++errcnt;
-        // TODO: resolve error string
         if (errcnt > errlimit)
         {
             printf("failed (%s), retry-limit exceeded (%d/%d), skipping tag\n", freefare_strerror(tag), errcnt, errlimit);
@@ -273,7 +276,6 @@ RETRY:
     err = mifare_desfire_connect(tag);
     if (err < 0)
     {
-        printf("Can't connect to Mifare DESFire target.");
         goto RETRY;
     }
     printf("done\n");
@@ -286,7 +288,6 @@ RETRY:
     {
         free(aid);
         aid = NULL;
-        printf("Can't select application.");
         goto RETRY;
     }
     printf("done\n");
@@ -300,7 +301,6 @@ RETRY:
     {
         free(key);
         key = NULL;
-        printf("Can't Authenticate. ");
         goto RETRY;
     }
     free(key);
@@ -311,7 +311,6 @@ RETRY:
     err = mifare_desfire_get_card_uid(tag, &realuid_str);
     if (err < 0)
     {
-        printf("Can't get real UID. ");
         goto RETRY;
     }
     printf("%s\n", realuid_str);
@@ -331,9 +330,10 @@ RETRY:
             // TODO: configure these magic numbers as constants or enum
             case -3:
                 // Revoked!
-                // TODO: Overwrite the card ACL to 0x0
                 printf("REVOKED card\n");
                 zmq_publish_result(publisher, realuid_str, "REVOKED");
+                // Overwrite the card ACL to 0x0
+                nfclock_overwrite_acl(tag, realuid_str, 0x0);
                 goto FAIL;
                 break;
             case -2:
@@ -341,6 +341,8 @@ RETRY:
                 // PONDER: Should we overwrite the ACL here too ? probably...
                 printf("Unknown card\n");
                 zmq_publish_result(publisher, realuid_str, "UNKNOWN");
+                // Overwrite the card ACL to 0x0
+                nfclock_overwrite_acl(tag, realuid_str, 0x0);
                 goto FAIL;
                 break;
             default:
@@ -358,7 +360,6 @@ RETRY:
     {
         free(key);
         key = NULL;
-        printf("Can't Authenticate. ");
         goto RETRY;
     }
     free(key);
@@ -366,6 +367,12 @@ RETRY:
     printf("done\n");
 
     printf("Reading ACL file, ");
+    err = nfclock_read_uint32(tag, nfclock_acl_file_id, &acl);
+    if (err < 0)
+    {
+        goto RETRY;
+    }
+    /*
     err = mifare_desfire_read_data (tag, nfclock_acl_file_id, 0, sizeof(aclbytes), aclbytes);
     if (err < 0)
     {
@@ -373,11 +380,12 @@ RETRY:
         goto RETRY;
     }
     acl = aclbytes[0] | (aclbytes[1] << 8) | (aclbytes[2] << 16) | (aclbytes[3] << 24);
+    */
     printf("done, got 0x%lx \n", (unsigned long)acl);
 
     if (acl != db_acl)
     {
-        // TODO: Overwrite ACL file on card
+        nfclock_overwrite_acl(tag, realuid_str, db_acl);
     }
     
     if (db_acl & REQUIRE_ACL)

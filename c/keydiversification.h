@@ -1,3 +1,6 @@
+#ifndef NFCLOCK_KEYDIVERSIFICATION_H
+#define NFCLOCK_KEYDIVERSIFICATION_H
+
 /**
  * AES-128 CMAC based key diversification
  */
@@ -22,3 +25,5 @@
  * @return int 0 for no errors, error code otherwise
  */
 int nfclock_diversify_key_aes128(uint8_t base_key[AES_BLOCK_SIZE], uint8_t aid[AID_SIZE], char *uid_str, uint8_t *sysid, size_t sysid_size, uint8_t new_key[AES_BLOCK_SIZE]);
+
+#endif

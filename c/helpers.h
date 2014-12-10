@@ -1,3 +1,6 @@
+#ifndef NFCLOCK_HELPERS_H
+#define NFCLOCK_HELPERS_H
+
 #include <stdbool.h>
 #include <stdint.h>
 #include <freefare.h>
@@ -9,3 +12,6 @@ uint16_t nfclock_fileaccessrights(uint8_t readkey, uint8_t writekey, uint8_t rwk
 
 int nfclock_write_uint32(MifareTag tag, uint8_t fileid, uint32_t data);
 int nfclock_read_uint32(MifareTag tag, uint8_t fileid, uint32_t *data);
+
+
+#endif

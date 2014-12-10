@@ -1,3 +1,7 @@
 pre-personalize_config.h
 smart_node_config.h
 dumb_node_config.h
+pre-personalize_config.c
+smart_node_config.c
+dumb_node_config.c
+

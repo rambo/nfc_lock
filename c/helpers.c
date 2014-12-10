@@ -60,3 +60,5 @@ int nfclock_read_uint32(MifareTag tag, uint8_t fileid, uint32_t *data)
     *data = databytes[0] | (databytes[1] << 8) | (databytes[2] << 16) | (databytes[3] << 24);
     return 0;
 }
+
+

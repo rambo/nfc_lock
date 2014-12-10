@@ -57,12 +57,6 @@ int handle_tag(MifareTag tag, bool *tag_valid)
     char *realuid_str = NULL;
     MifareDESFireAID aid;
     uint8_t diversified_key_data[16];
-    /*
-    uint8_t aclbytes[4];
-    uint32_t acl;
-    uint8_t midbytes[2];
-    uint16_t mid;
-    */
 
 RETRY:
     if (err != 0)

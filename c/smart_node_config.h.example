@@ -3,11 +3,11 @@
 #include <stdint.h>
 #include "dumb_node_config.h"
 
-const uint8_t nfclock_acl_file_id = 0x0;
-const uint8_t nfclock_mid_file_id = 0x1;
-const uint8_t nfclock_acl_write_key_base[16] = { 0xFE, 0xED, 0xDE, 0xED, 0xFE, 0xED, 0xDE, 0xED, 0xFE, 0xED, 0xDE, 0xED, 0xFE, 0xED, 0xDE, 0xED };
-const uint8_t nfclock_acl_read_key_base[16] = { 0xCA, 0xFF, 0xFE, 0xEE, 0xCA, 0xFF, 0xFE, 0xEE, 0xCA, 0xFF, 0xFE, 0xEE, 0xCA, 0xFF, 0xFE, 0xEE };
-const uint8_t nfclock_acl_write_keyid = 0x03;
-const uint8_t nfclock_acl_read_keyid = 0x02;
+extern const uint8_t nfclock_acl_file_id;
+extern const uint8_t nfclock_mid_file_id;
+extern const uint8_t nfclock_acl_write_key_base[16];
+extern const uint8_t nfclock_acl_read_key_base[16];
+extern const uint8_t nfclock_acl_write_keyid;
+extern const uint8_t nfclock_acl_read_keyid;
 
 #endif
