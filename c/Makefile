@@ -16,10 +16,13 @@ PROGRAMS += read_personalized
 READ_PRESONALIZED_SRC = keydiversification.c helpers.c smart_node_config.c dumb_node_config.c read_personalized.c
 
 PROGRAMS += pre_personalize
-PRE_PRESONALIZE_SRC = keydiversification.c helpers.c smart_node_config.c dumb_node_config.c pre-personalize_config.c pre_personalize.c
+PRE_PERSONALIZE_SRC = keydiversification.c helpers.c smart_node_config.c dumb_node_config.c pre-personalize_config.c pre_personalize.c
 
 PROGRAMS += de_personalize
 DE_PRESONALIZE_SRC = keydiversification.c helpers.c pre-personalize_config.c de_personalize.c
+
+PROGRAMS += personalize
+PERSONALIZE_SRC = keydiversification.c helpers.c smart_node_config.c dumb_node_config.c pre-personalize_config.c personalize.c
 
 PROGRAMS += pthread_example
 PTHREAD_EXAMPLE_SRC = pthread_example.c
@@ -51,8 +54,11 @@ keydiversification_test: $(KEYDIVERSIFICATION_TEST_SRC)
 read_personalized: $(READ_PERSONALIZED_SRC)
 	$(CC) $(READ_PRESONALIZED_SRC) $(CFLAGS_WITH_PTHREAD) $(LDFLAGS) -o $@ $(LIBS)
 
-pre_personalize: $(PRE_PRESONALIZE_SRC)
-	$(CC) $(PRE_PRESONALIZE_SRC) $(CFLAGS_WITH_PTHREAD) $(LDFLAGS) -o $@ $(LIBS)
+pre_personalize: $(PRE_PERSONALIZE_SRC)
+	$(CC) $(PRE_PERSONALIZE_SRC) $(CFLAGS_WITH_PTHREAD) $(LDFLAGS) -o $@ $(LIBS)
+
+personalize: $(PERSONALIZE_SRC)
+	$(CC) $(PERSONALIZE_SRC) $(CFLAGS_WITH_PTHREAD) $(LDFLAGS) -o $@ $(LIBS)
 
 de_personalize: $(DE_PRESONALIZE_SRC)
 	$(CC) $(DE_PRESONALIZE_SRC) $(CFLAGS_WITH_PTHREAD) $(LDFLAGS) -o $@ $(LIBS)
