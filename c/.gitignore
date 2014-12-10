@@ -1,3 +1,16 @@
+# Binaries 
+cmac_example
+de_personalize
+gatekeeper
+keydiversification_test
+mifare-desfire-access
+personalize
+pre_personalize
+pthread_example
+read_personalized
+req_test
+
+# Configs that contain sensitive info
 pre-personalize_config.h
 smart_node_config.h
 dumb_node_config.h
