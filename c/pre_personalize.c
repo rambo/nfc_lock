@@ -267,31 +267,39 @@ RETRY:
     key = NULL;
     printf("done\n");
 
-
-/*
-
-    printf("Reading ACL file, ");
-    err = mifare_desfire_read_data (tag, nfclock_acl_file_id, 0, sizeof(aclbytes), aclbytes);
+    printf("Creating ACL file, ");
+    err = mifare_desfire_create_std_data_file(tag, nfclock_acl_file_id, MDCM_ENCIPHERED, nfclock_fileaccessrights(nfclock_acl_read_keyid, nfclock_acl_write_keyid, 0x0, 0x0), 4);
     if (err < 0)
     {
-        printf("got %d as bytes read", err);
         goto RETRY;
     }
-    acl = aclbytes[0] | (aclbytes[1] << 8) | (aclbytes[2] << 16) | (aclbytes[3] << 24);
-    printf("done, got 0x%lx \n", (unsigned long)acl);
+    printf("done\n");
 
-
-    printf("Reading member-id file, ");
-    err = mifare_desfire_read_data (tag, nfclock_mid_file_id, 0, sizeof(midbytes), midbytes);
+    printf("Writing ACL value (0), ");
+    err = nfclock_write_uint32(tag, nfclock_acl_file_id, 0x0);
     if (err < 0)
     {
-        printf("got %d as bytes read", err);
         goto RETRY;
     }
-    mid = midbytes[0] | (midbytes[1] << 8);
-    printf("done, got %d \n", mid);
+    printf("done\n");
 
-*/
+    printf("Creating member-id file, ");
+    err = mifare_desfire_create_std_data_file(tag, nfclock_mid_file_id, MDCM_ENCIPHERED, nfclock_fileaccessrights(nfclock_acl_read_keyid, 0x0, 0x0, 0x0), 4);
+    if (err < 0)
+    {
+        goto RETRY;
+    }
+    printf("done\n");
+
+
+    printf("Writing member-id value (0), ");
+    err = nfclock_write_uint32(tag, nfclock_mid_file_id, 0x0);
+    if (err < 0)
+    {
+        goto RETRY;
+    }
+    printf("done\n");
+
     // All checks done seems good
     if (realuid_str)
     {
