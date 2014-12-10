@@ -17,6 +17,7 @@
 
 #include "smart_node_config.h"
 #include "keydiversification.h"
+#include "helpers.h"
 
 // Catch SIGINT and SIGTERM so we can do a clean exit
 static int s_interrupted = 0;
@@ -143,6 +144,12 @@ RETRY:
     printf("done\n");
 
     printf("Reading ACL file, ");
+    err = nfclock_read_uint32(tag, nfclock_acl_file_id, &acl);
+    if (err < 0)
+    {
+        goto RETRY;
+    }
+    /*
     err = mifare_desfire_read_data (tag, nfclock_acl_file_id, 0, sizeof(aclbytes), aclbytes);
     if (err < 0)
     {
@@ -150,10 +157,18 @@ RETRY:
         goto RETRY;
     }
     acl = aclbytes[0] | (aclbytes[1] << 8) | (aclbytes[2] << 16) | (aclbytes[3] << 24);
+    */
     printf("done, got 0x%lx \n", (unsigned long)acl);
 
 
     printf("Reading member-id file, ");
+
+    err = nfclock_read_uint32(tag, nfclock_mid_file_id, &mid);
+    if (err < 0)
+    {
+        goto RETRY;
+    }
+    /*
     err = mifare_desfire_read_data (tag, nfclock_mid_file_id, 0, sizeof(midbytes), midbytes);
     if (err < 0)
     {
@@ -161,8 +176,8 @@ RETRY:
         goto RETRY;
     }
     mid = midbytes[0] | (midbytes[1] << 8);
+    */
     printf("done, got %d \n", mid);
-
 
     // All checks done seems good
     if (realuid_str)
@@ -173,6 +188,7 @@ RETRY:
     mifare_desfire_disconnect(tag);
     *tag_valid = true;
     return 0;
+
 FAIL:
     if (realuid_str)
     {
