@@ -108,6 +108,14 @@ RETRY:
     key = NULL;
     printf("done\n");
 
+    printf("Getting real UID, ");
+    err = mifare_desfire_get_card_uid(tag, &realuid_str);
+    if (err < 0)
+    {
+        goto RETRY;
+    }
+    printf("%s\n", realuid_str);
+
     printf("Writing ACL value (0x%lx), ", (unsigned long)newacl);
     err = nfclock_write_uint32(tag, nfclock_acl_file_id, newacl);
     if (err < 0)
@@ -125,8 +133,10 @@ RETRY:
     }
     printf("done\n");
 
-    
-    // TODO: pretty-print the result (real UID, acl and mid)
+    printf("\n*** Write the following down ***\n");
+    printf("  UID: %s\n", realuid_str);
+    printf("  MID: 0x%lx\n", (unsigned long)newmid);
+    printf("*** Write the above down ***\n\n");
 
     // All checks done seems good
     if (realuid_str)
