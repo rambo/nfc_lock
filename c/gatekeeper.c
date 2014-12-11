@@ -246,6 +246,8 @@ int handle_tag(MifareTag tag, bool *tag_valid, void* publisher)
     uint8_t diversified_key_data[16];
     uint32_t acl;
     uint32_t db_acl;
+    size_t read;
+    uint8_t uint32bytes[4];
 
     *tag_valid = false;
 
@@ -367,20 +369,20 @@ RETRY:
     printf("done\n");
 
     printf("Reading ACL file, ");
+    /** 
+     * This triggers stack-smashing detector for some reason...
     err = nfclock_read_uint32(tag, nfclock_acl_file_id, &acl);
     if (err < 0)
     {
         goto RETRY;
     }
-    /*
-    err = mifare_desfire_read_data (tag, nfclock_acl_file_id, 0, sizeof(aclbytes), aclbytes);
-    if (err < 0)
+     */
+    read = mifare_desfire_read_data(tag, nfclock_acl_file_id, 0, 4, uint32bytes);
+    if (read < 4)
     {
-        printf("got %d as bytes read", err);
         goto RETRY;
     }
-    acl = aclbytes[0] | (aclbytes[1] << 8) | (aclbytes[2] << 16) | (aclbytes[3] << 24);
-    */
+    acl = (uint32bytes[0] | (uint32bytes[1] << 8) | (uint32bytes[2] << 16) | (uint32bytes[3] << 24));
     printf("done, got 0x%lx \n", (unsigned long)acl);
 
     if (acl != db_acl)
