@@ -46,8 +46,8 @@ int handle_tag(MifareTag tag, bool *tag_valid)
     MifareDESFireKey key;
     char *realuid_str = NULL;
     uint8_t diversified_key_data[16];
-    uint32_t acl = 0;
-    uint32_t mid = 0;
+    uint32_t acl;
+    uint32_t mid;
     size_t read;
     uint8_t uint32bytes[4];
     
