@@ -100,10 +100,13 @@ RETRY:
     err = mifare_desfire_authenticate(tag, 0, key);
     if (err < 0)
     {
+        free(key);
+        key = NULL;
         goto RETRY;
     }
+    free(key);
+    key = NULL;
     printf("done\n");
-
 
     printf("Writing ACL value (0x%lx), ", (unsigned long)newacl);
     err = nfclock_write_uint32(tag, nfclock_acl_file_id, newacl);
