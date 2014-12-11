@@ -100,18 +100,13 @@ RETRY:
     }
     printf("done\n");
 
-    /**
-     * TODO: enable random id here
-     * mifare_desfire_set_configuration(tag, false, true);
-     */
-
-    printf("Getting real UID, ");
-    err = mifare_desfire_get_card_uid(tag, &realuid_str);
+    printf("Enabling random id, ");
+    err = mifare_desfire_set_configuration(tag, false, true);
     if (err < 0)
     {
         goto RETRY;
     }
-    printf("%s\n", realuid_str);
+    printf("done\n");
 
     printf("Changing Card Master Key, ");
     key = mifare_desfire_aes_key_new_with_version((uint8_t*)&nfclock_cmk, 0x0);
@@ -140,6 +135,14 @@ RETRY:
     free(key);
     key = NULL;
     printf("done\n");
+
+    printf("Getting real UID, ");
+    err = mifare_desfire_get_card_uid(tag, &realuid_str);
+    if (err < 0)
+    {
+        goto RETRY;
+    }
+    printf("%s\n", realuid_str);
 
     printf("Setting application default key, ");
     err = mifare_desfire_set_default_key(tag, null_aes_key);
@@ -204,8 +207,10 @@ RETRY:
     err = mifare_desfire_authenticate(tag, 0, key);
     if (err < 0)
     {
+        free(key);
         goto RETRY;
     }
+    free(key);
     printf("done\n");
 
     printf("Changing UID read key, ");
@@ -452,7 +457,7 @@ int main(int argc, char *argv[])
         
             /* pthread cond_timedwait expects an absolute time to wait until */
             clock_gettime(CLOCK_REALTIME, &abs_time);
-            abs_time.tv_sec += 1;
+            abs_time.tv_sec += 2;
         
             // Use this struct to pass data between thread and main
             struct thread_data tagdata;
