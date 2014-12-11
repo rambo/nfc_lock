@@ -278,9 +278,17 @@ int main(int argc, char *argv[])
             // Use this struct to pass data between thread and main
             struct thread_data tagdata;
             tagdata.tag = tags[i];
-            // TODO: Ask for new ACL and mid in hex format from user and decode to uint32
             tagdata.newacl = 0;
             tagdata.newmid = 0;
+            
+            // Asking for mid (ACL is redundant, we can update it at smart node anyway)
+            char input_buffer[20];
+            fputs("enter mid (in hex format eg 0xdeadbeef): ", stdout);
+            fflush(stdout);
+            if ( fgets(input_buffer, sizeof input_buffer, stdin) != NULL )
+            {
+                tagdata.newmid = strtoul(input_buffer, NULL, 0);
+            }
 
             // pthreads initialization stuff
             struct timespec abs_time;

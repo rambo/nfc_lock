@@ -50,6 +50,7 @@ int nfclock_read_uint32(MifareTag tag, uint8_t fileid, uint32_t *data)
 {
     uint8_t databytes[4];
     size_t read;
+    uint32_t tmpdata;
 
     read = mifare_desfire_read_data(tag, fileid, 0, 4, databytes);
     if (read < 4)
@@ -57,7 +58,18 @@ int nfclock_read_uint32(MifareTag tag, uint8_t fileid, uint32_t *data)
         // TODO: how to raise a sane error
         return -1;
     }
-    *data = databytes[0] | (databytes[1] << 8) | (databytes[2] << 16) | (databytes[3] << 24);
+    tmpdata = (databytes[0] | (databytes[1] << 8) | (databytes[2] << 16) | (databytes[3] << 24));
+    printf("nfclock_read_uint32: got 0x%lx \n", (unsigned long)tmpdata);
+    // This triggers *** stack smashing detected ***
+    memcpy(data, &tmpdata, sizeof(tmpdata));
+    /**
+     * Same with this
+    *data = tmpdata;
+     */
+    /**
+     * And this
+    *data = (databytes[0] | (databytes[1] << 8) | (databytes[2] << 16) | (databytes[3] << 24));
+     */
     return 0;
 }
 

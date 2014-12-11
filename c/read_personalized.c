@@ -141,15 +141,6 @@ RETRY:
     key = NULL;
     printf("done\n");
 
-    printf("Reading ACL file, ");
-    err = nfclock_read_uint32(tag, nfclock_acl_file_id, &acl);
-    if (err < 0)
-    {
-        goto RETRY;
-    }
-    printf("done, got 0x%lx \n", (unsigned long)acl);
-
-
     printf("Reading member-id file, ");
     err = nfclock_read_uint32(tag, nfclock_mid_file_id, &mid);
     if (err < 0)
@@ -157,6 +148,14 @@ RETRY:
         goto RETRY;
     }
     printf("done, got 0x%lx \n", (unsigned long)mid);
+
+    printf("Reading ACL file, ");
+    err = nfclock_read_uint32(tag, nfclock_acl_file_id, &acl);
+    if (err < 0)
+    {
+        goto RETRY;
+    }
+    printf("done, got 0x%lx \n", (unsigned long)acl);
 
     // All checks done seems good
     if (realuid_str)
