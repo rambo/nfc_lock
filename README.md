@@ -13,7 +13,7 @@ Ubuntu 14.04 has libnfc but no libfreefare, use [this PPA](https://launchpad.net
     sudo apt-get install libfreefare0 libfreefare-bin
     sudo apt-get install python-zmq python-yaml python-tornado
 
-`python-yaml` and `python-tornado` can be installed to virtualenv (esp tornado might be better to isntall via pip even if not to virtualenv the deb pulls unneccessary dependencies, zmq will be painfull.
+`python-yaml` and `python-tornado` can be installed to virtualenv (esp tornado might be better to install via pip even if not to virtualenv the deb pulls unneccessary dependencies), zmq will be painful to install via pip, use the system package.
 
 ### For compiling
 
@@ -24,27 +24,6 @@ For the C programs and possibly the Go libraries.
 ### RasPi
 
 Install the debs from [./raspi/debs/](./raspi/debs/) (or compile them using source debs from Jessie)
-
-## Go
-
-Install Go and some deps you are going to need when fetching Go libraries
-
-    sudo apt-get install golang mercurial git-core
-
-Make sure your GOPATH is set
-
-    mkdir $HOME/.go
-    export GOPATH=$HOME/.go
-    export PATH=$PATH:$GOPATH/bin
-
-Install library dependencies
-
-    go get github.com/fuzxxl/nfc/2.0/nfc
-    go get github.com/fuzxxl/freefare/0.3/freefare
-    go get gopkg.in/yaml.v2
-    go get github.com/jacobsa/crypto/cmac
-    go get github.com/mattn/go-sqlite3
-    go get github.com/davecheney/gpio
 
 ### RasPi
 

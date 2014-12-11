@@ -1,9 +1,0 @@
-green_led:
-    pin: 21
-    time: 2000
-red_led:
-    pin: 16
-    time: 1000
-relay:
-    pin: 18
-    time: 5000
