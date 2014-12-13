@@ -195,7 +195,7 @@ int uid_valid(char* uid, uint32_t *acl)
                 {
                     case 0:
                         // Parse the ACL (hex-encoded) number
-                        *acl = strtol(body, NULL, 0);
+                        *acl = strtoul(body, NULL, 0);
                         break;
                     case -2:
                         // fall-through
