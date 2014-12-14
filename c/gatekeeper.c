@@ -244,9 +244,9 @@ int handle_tag(MifareTag tag, bool *tag_valid, void* publisher)
     MifareDESFireKey key;
     char *realuid_str = NULL;
     uint8_t diversified_key_data[16];
-    uint32_t acl;
-    uint32_t db_acl;
-    size_t read;
+    uint32_t acl = 0;
+    uint32_t db_acl= 0;
+    size_t read = 0;
     uint8_t uint32bytes[4];
 
     *tag_valid = false;
@@ -353,7 +353,7 @@ RETRY:
                 goto FAIL;
         }
     }
-    printf("db_acl=0x%lx \n", (unsigned long)db_acl);
+    //printf("db_acl=0x%lx \n", (unsigned long)db_acl);
 
     printf("Re-auth with ACL read key, ");
     key = mifare_desfire_aes_key_new_with_version((uint8_t*)diversified_key_data, 0x0);
@@ -387,6 +387,7 @@ RETRY:
 
     if (acl != db_acl)
     {
+        printf("db_acl=0x%lx (overwriting to card)\n", (unsigned long)db_acl);
         nfclock_overwrite_acl(tag, realuid_str, db_acl);
     }
     
