@@ -310,7 +310,7 @@ int main(int argc, char *argv[])
         
             /* pthread cond_timedwait expects an absolute time to wait until */
             clock_gettime(CLOCK_REALTIME, &abs_time);
-            abs_time.tv_sec += 1;
+            abs_time.tv_sec += 2;
         
         
             err = pthread_create(&tid, NULL, handle_tag_pthread, (void *)&tagdata);
@@ -352,14 +352,14 @@ int main(int argc, char *argv[])
         if (valid_found)
         {
             printf("OK: tag personalized\n");
+            usleep(2500 * 1000);
         }
         else
         {
             printf("ERROR: problem personalizing\n");
+            usleep(500 * 1000);
         }
 
-        // And if we had tags then wait half a sec before resuming polling again
-        usleep(2500 * 1000);
     }
 
     nfc_close (device);
