@@ -25,14 +25,6 @@ For the C programs and possibly the Go libraries.
 
 Install the debs from [./raspi/debs/](./raspi/debs/) (or compile them using source debs from Jessie)
 
-### RasPi
-
-See https://xivilization.net/~marek/blog/2014/07/05/go-1-dot-3-for-raspberry-pi/ for Go 1.3 (1.0 will not work)
-
-    sudo apt-get install apt-transport-https
-
-Then edit `/etc/apt/sources.list.d/xivilization-raspbian.list` and switch to https
-
 ## Terms
 
   - Card (PICC in NXP terms): The DESFire EV1 chip+antenna in a package (fob, card, sticker...)
