@@ -50,3 +50,9 @@ In reality you will generate this file based on your person registry (keep track
 ## Hacking
 
 Remember to valgrind your C programs (`valgrind -v --leak-check=yes  myprog args`) at the same time as you do general functionality testing.
+
+### RasPi
+
+It seems Valgrind does not (and will not) support some instructions we use to talk with the NFC chips, see (this stackoverflow)[valgrindworkaround] for a workaround.
+
+[valgrindworkaround]: http://stackoverflow.com/questions/20066215/valgrind-unrecognizes-memcmp-instruction-in-raspberry-pi#comment-29892760
