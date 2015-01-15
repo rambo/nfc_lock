@@ -1,4 +1,9 @@
 #include "log.h"
+#include <string.h> // strlen
+#include <stdio.h> // printf & vprintf
+#include <stdarg.h> // va_xxx
+#include <time.h>
+
 
 // From http://stackoverflow.com/questions/6508461/logging-library-for-c
 void log_format(const char* tag, const char* message, va_list args) {   time_t now;     time(&now);     char * date =ctime(&now);   date[strlen(date) - 1] = '\0';  printf("%s [%s] ", date, tag);  vprintf(message, args);     printf("\n"); }
