@@ -534,6 +534,7 @@ int main(int argc, char *argv[])
             // The tag array ends with null element, if first one is null then array is empty
             || !tags[0])
         {
+            // TODO: Check for device-level error (and/or check the device is still talking to us!) if we can't talk to the device exit with error!!!
             if (tags)
             {
                 // Free the empty array so we don't leak memory
