@@ -17,7 +17,7 @@ Ubuntu 14.04 has libnfc but no libfreefare, use [this PPA](https://launchpad.net
 
 ### For compiling
 
-For the C programs and possibly the Go libraries.
+For the C programs.
 
     sudo apt-get install libfreefare-dev libnfc-dev libssl-dev pkg-config libzmq-dev
 
