@@ -10,19 +10,19 @@ PROGRAMS += cmac_example
 CMAC_EXAMPLE_SRC = cmac_example.c
 
 PROGRAMS += keydiversification_test
-KEYDIVERSIFICATION_TEST_SRC = keydiversification.c helpers.c log.c keydiversification_test.c
+KEYDIVERSIFICATION_TEST_SRC = log.c keydiversification.c helpers.c keydiversification_test.c
 
 PROGRAMS += read_personalized
-READ_PRESONALIZED_SRC = keydiversification.c helpers.c log.c smart_node_config.c dumb_node_config.c read_personalized.c
+READ_PRESONALIZED_SRC = log.c keydiversification.c helpers.c smart_node_config.c dumb_node_config.c read_personalized.c
 
 PROGRAMS += pre_personalize
-PRE_PERSONALIZE_SRC = keydiversification.c helpers.c log.c smart_node_config.c dumb_node_config.c pre-personalize_config.c pre_personalize.c
+PRE_PERSONALIZE_SRC = log.c keydiversification.c helpers.c smart_node_config.c dumb_node_config.c pre-personalize_config.c pre_personalize.c
 
 PROGRAMS += de_personalize
-DE_PRESONALIZE_SRC = keydiversification.c helpers.c log.c pre-personalize_config.c de_personalize.c
+DE_PRESONALIZE_SRC = log.c keydiversification.c helpers.c pre-personalize_config.c de_personalize.c
 
 PROGRAMS += personalize
-PERSONALIZE_SRC = keydiversification.c helpers.c log.c smart_node_config.c dumb_node_config.c pre-personalize_config.c personalize.c
+PERSONALIZE_SRC = log.c keydiversification.c helpers.c smart_node_config.c dumb_node_config.c pre-personalize_config.c personalize.c
 
 PROGRAMS += pthread_example
 PTHREAD_EXAMPLE_SRC = pthread_example.c
@@ -35,7 +35,7 @@ LOG_TEST_SRC = log.c log_test.c
 
 
 PROGRAMS += gatekeeper
-GATEKEEPER_SRC = keydiversification.c helpers.c log.c smart_node_helpers.c smart_node_config.c dumb_node_config.c gatekeeper.c
+GATEKEEPER_SRC = log.c keydiversification.c helpers.c smart_node_helpers.c smart_node_config.c dumb_node_config.c gatekeeper.c
 
 
 
