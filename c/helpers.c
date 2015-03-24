@@ -1,4 +1,5 @@
 #include "helpers.h"
+#include "log.h"
 
 uint8_t nfclock_applicationsettings(uint8_t accesskey, bool frozen, bool req_auth_fileops, bool req_auth_dir, bool allow_master_key_chg)
 {
@@ -41,6 +42,7 @@ int nfclock_write_uint32(MifareTag tag, uint8_t fileid, uint32_t data)
     if (wrote < 4)
     {
         // TODO: how to raise a sane error
+        log_error("Writing value failed, %s", freefare_strerror(tag));
         return -1;
     }
     return 0;
@@ -56,10 +58,11 @@ int nfclock_read_uint32(MifareTag tag, uint8_t fileid, uint32_t *target)
     if (read < 4)
     {
         // TODO: how to raise a sane error
+        log_error("Reading value failed, %s", freefare_strerror(tag));
         return -1;
     }
     tmpdata = (databytes[0] | (databytes[1] << 8) | (databytes[2] << 16) | (databytes[3] << 24));
-    printf("nfclock_read_uint32: got 0x%lx \n", (unsigned long)tmpdata);
+    log_debug("nfclock_read_uint32: got 0x%lx \n", (unsigned long)tmpdata);
     // This triggers *** stack smashing detected ***
     memcpy(target, &tmpdata, sizeof(tmpdata));
     /**
