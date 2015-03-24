@@ -35,7 +35,7 @@ LOG_TEST_SRC = log.c log_test.c
 
 
 PROGRAMS += gatekeeper
-GATEKEEPER_SRC = keydiversification.c helpers.c log.c smart_node_helpers.c log.c smart_node_config.c dumb_node_config.c gatekeeper.c
+GATEKEEPER_SRC = keydiversification.c helpers.c log.c smart_node_helpers.c smart_node_config.c dumb_node_config.c gatekeeper.c
 
 
 
