@@ -70,14 +70,14 @@ class keyserver(object):
 
         uid = data[0].lower()
 
-        self.sqlite_cursor.execute("SELECT rowid FROM revoked WHERE uid=?;", (uid, ) )
+        self.sqlite_cursor.execute("SELECT rowid FROM revoked_tokens WHERE value=?;", (uid, ) )
         revokeddata = self.sqlite_cursor.fetchone()
         if revokeddata:
             # PONDER: Do we log this here or let the gatekeeper program to publish the final result ?
             self.zmq_stream.send_multipart(["REV", "0x0"]) # Revoked card
             return
 
-        self.sqlite_cursor.execute("SELECT acl FROM keys WHERE uid=?;", (uid, ) )
+        self.sqlite_cursor.execute("SELECT acl FROM valid_tokens WHERE value=?;", (uid, ) )
         acldata = self.sqlite_cursor.fetchone()
         if not acldata:
             # PONDER: Do we log this here or let the gatekeeper program to publish the final result ?
