@@ -37,13 +37,14 @@ Install the debs from [./raspi/debs/](./raspi/debs/) (or compile them using sour
 
 Create a test file `sqlite3 keys.db`:
 
-    CREATE TABLE keys(uid TEXT UNIQUE, acl INTEGER);
-    CREATE TABLE revoked(uid TEXT UNIQUE);
+
+    CREATE TABLE valid_tokens (value TEXT UNIQUE, type INTEGER, acl INTEGER, external_ids TEXT);
+    CREATE TABLE revoked_tokens (value TEXT UNIQUE, type INTEGER);
 
 Prepare some tags and insert their (real) UIDs to the grants and revokes
 
-    INSERT INTO revoked VALUES ("04453069b21e80");
-    INSERT INTO keys VALUES ("04212f69b21e80", 1);
+    INSERT INTO revoked_tokens VALUES ("04453069b21e80");
+    INSERT INTO valid_tokens VALUES ("04212f69b21e80", 0, 1);
 
 In reality you will generate this file based on your person registry (keep track of validity times etc there, then regenerate the keydb for the door).
 
