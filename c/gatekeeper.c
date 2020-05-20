@@ -89,11 +89,11 @@ int zmq_publish_result(void* publisher, char* uid, char* result)
         zmq_msg_close(&msgpart);
         return err;
     }
-    err = zmq_send(publisher, &msgpart, ZMQ_SNDMORE);
+    err = zmq_msg_send(&msgpart, publisher, ZMQ_SNDMORE);
     zmq_msg_close(&msgpart);
     if (err != 0)
     {
-        log_error("zmq_send failed with %s", zmq_strerror(zmq_errno()));
+        log_error("zmq_msg_send failed with %s", zmq_strerror(zmq_errno()));
         return err;
     }
 
@@ -104,11 +104,11 @@ int zmq_publish_result(void* publisher, char* uid, char* result)
         zmq_msg_close(&msgpart);
         return err;
     }
-    err = zmq_send(publisher, &msgpart, 0);
+    err = zmq_msg_send(&msgpart, publisher, 0);
     zmq_msg_close(&msgpart);
     if (err != 0)
     {
-        log_error("zmq_send failed with %s", zmq_strerror(zmq_errno()));
+        log_error("zmq_msg_send failed with %s", zmq_strerror(zmq_errno()));
         return err;
     }
 
@@ -141,10 +141,10 @@ int uid_valid(char* uid, uint32_t *acl)
         zmq_msg_close(&request);
         goto END;
     }
-    err = zmq_send(requester, &request, 0);
+    err = zmq_msg_send( &request,requester,0);
     if (err != 0)
     {
-        log_error("zmq_send failed with %s", zmq_strerror(zmq_errno()));
+        log_error("zmq_msg_send failed with %s", zmq_strerror(zmq_errno()));
         goto END;
     }
     zmq_msg_close(&request);
@@ -160,11 +160,12 @@ int uid_valid(char* uid, uint32_t *acl)
             log_error("zmq_msg_init failed with %s", zmq_strerror(zmq_errno()));
             goto END;
         }
-        err = zmq_recv(requester, &message, 0);
+        err = zmq_msg_recv(&message, requester, 0);
+	
         if (err != 0)
         {
             zmq_msg_close (&message);
-            log_error("zmq_recv failed with %s", zmq_strerror(zmq_errno()));
+            log_error("zmq_msg_recv failed with %s", zmq_strerror(zmq_errno()));
             goto END;
         }
 
