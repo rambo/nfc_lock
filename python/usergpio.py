@@ -103,8 +103,8 @@ class ledstring(object):
         for c in colors:
             self._send_rgb(RGBTABLE[c][0], RGBTABLE[c][1], RGBTABLE[c][2])
         self._end_of_frame()
-        self._start_of_frame()
-        self._start_of_frame()
+        #self._start_of_frame()
+        #self._start_of_frame()
 
 if __name__ == "__main__":
     relay = gpiopin(4, dir="out")

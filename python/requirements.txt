@@ -1,4 +1,5 @@
-PyYAML==3.11
-tornado==4.0.2
-pyzmq==14.0.1
-CouchDB==1.0
+CouchDB==1.2
+pyzmq==19.0.1
+tornado==6.0.4
+pyzmq==19.0.1
+
