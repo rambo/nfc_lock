@@ -1,5 +1,5 @@
 #!/bin/bash
-scp -q "$1":keys.db keys.db.new
+scp -q "$1":/opt/keydbdownload/keys.db keys.db.new
 diff -q keys.db keys.db.new
 DIFFRET=$?
 if [ "$DIFFRET" -eq "2" ]
