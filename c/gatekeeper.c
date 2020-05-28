@@ -28,7 +28,7 @@
 #define ZMQ_NUM_IOTHREADS 5
 // TODO: Configure these in a saner location
 #define ZMQ_DB_ORACLE_ADDRESS "tcp://localhost:7070"
-#define ZMQ_ANNOUNCER_ADDRESS "tcp://*:7071"
+#define ZMQ_ANNOUNCER_ADDRESS "tcp://127.0.0.1:7071"
 #define REQUIRE_ACL 0x1
 
 
