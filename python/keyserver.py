@@ -1,8 +1,8 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 from __future__ import with_statement
 import os, sys
-from exceptions import NotImplementedError,RuntimeError,KeyboardInterrupt
+#from exceptions import NotImplementedError,RuntimeError,KeyboardInterrupt
 import sqlite3
 # Decimal recipe from http://stackoverflow.com/questions/6319409/how-to-convert-python-decimal-to-sqlite-numeric
 #import decimal
@@ -44,7 +44,7 @@ class keyserver(object):
         if self.sqlite_connection:
             self.sqlite_connection.close()
         with open(self.config_file) as f:
-            self.config = yaml.load(f)
+            self.config = yaml.load(f, Loader=yaml.SafeLoader)
         if os.path.exists(self.config['keydb']):
             self.db_file = os.path.realpath(self.config['keydb'])
         else:
@@ -65,29 +65,31 @@ class keyserver(object):
     def _on_recv(self, data, *args, **kwargs):
         #print("_on_recv: data=%s" % repr(data))
         if len(data) != 1:
-            self.zmq_stream.send_multipart(["INV", "0x0"]) # Invalid request
+            self.zmq_stream.send_multipart([b"INV", b"0x0"]) # Invalid request
             return
 
-        uid = data[0].lower()
+        uid = data[0].decode('ascii').lower()
 
         self.sqlite_cursor.execute("SELECT rowid FROM revoked_tokens WHERE value=?;", (uid, ) )
         revokeddata = self.sqlite_cursor.fetchone()
         if revokeddata:
+            print("UID %s is REVOKED" % uid)
             # PONDER: Do we log this here or let the gatekeeper program to publish the final result ?
-            self.zmq_stream.send_multipart(["REV", "0x0"]) # Revoked card
+            self.zmq_stream.send_multipart([b"REV", b"0x0"]) # Revoked card
             return
 
         self.sqlite_cursor.execute("SELECT acl FROM valid_tokens WHERE value=?;", (uid, ) )
         acldata = self.sqlite_cursor.fetchone()
         if not acldata:
+            print("UID %s NOT FOUND" % uid)
             # PONDER: Do we log this here or let the gatekeeper program to publish the final result ?
-            self.zmq_stream.send_multipart(["NF", "0x0"]) # Not found
+            self.zmq_stream.send_multipart([b"NF", b"0x0"]) # Not found
             return
 
         # PONDER: About logging: note that we do not yet know if this ACL is accepted at the gatekeeper end
-        self.zmq_stream.send_multipart(["OK", "0x%x" % acldata[0]])
+        print("UID %s OK" % uid)
+        self.zmq_stream.send_multipart([b"OK", b"0x%x" % acldata[0]])
         
-
     def quit(self, *args):
         # This will close the sockets too
         self.zmq_context.destroy()
@@ -105,8 +107,9 @@ if __name__ == '__main__':
         sys.exit(1)
 
     # TODO: Use tornado from ZMQ
-    from zmq.eventloop import ioloop
-    ioloop.install()
+    from tornado import gen, ioloop
+
+#    ioloop.install()
     loop = ioloop.IOLoop.instance()
     instance = keyserver(sys.argv[1], loop)
     instance.hook_signals()

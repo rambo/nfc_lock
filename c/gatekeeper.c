@@ -28,7 +28,7 @@
 #define ZMQ_NUM_IOTHREADS 5
 // TODO: Configure these in a saner location
 #define ZMQ_DB_ORACLE_ADDRESS "tcp://localhost:7070"
-#define ZMQ_ANNOUNCER_ADDRESS "tcp://*:7071"
+#define ZMQ_ANNOUNCER_ADDRESS "tcp://127.0.0.1:7071"
 #define REQUIRE_ACL 0x1
 
 
@@ -80,7 +80,7 @@ int str_to_msg(char* send, zmq_msg_t* msg)
 
 int zmq_publish_result(void* publisher, char* uid, char* result)
 {
-    int err;
+    int err, bytes_sent;
     zmq_msg_t msgpart;
     // use the result as topic
     err = str_to_msg(result, &msgpart);
@@ -89,11 +89,11 @@ int zmq_publish_result(void* publisher, char* uid, char* result)
         zmq_msg_close(&msgpart);
         return err;
     }
-    err = zmq_send(publisher, &msgpart, ZMQ_SNDMORE);
+    bytes_sent = zmq_msg_send(&msgpart, publisher, ZMQ_SNDMORE);
     zmq_msg_close(&msgpart);
-    if (err != 0)
+    if (bytes_sent < 0)
     {
-        log_error("zmq_send failed with %s", zmq_strerror(zmq_errno()));
+        log_error("zmq_msg_send1 failed with %s", zmq_strerror(zmq_errno()));
         return err;
     }
 
@@ -104,11 +104,11 @@ int zmq_publish_result(void* publisher, char* uid, char* result)
         zmq_msg_close(&msgpart);
         return err;
     }
-    err = zmq_send(publisher, &msgpart, 0);
+    bytes_sent = zmq_msg_send(&msgpart, publisher, 0);
     zmq_msg_close(&msgpart);
-    if (err != 0)
+    if (bytes_sent < 0)
     {
-        log_error("zmq_send failed with %s", zmq_strerror(zmq_errno()));
+        log_error("zmq_msg_send2 failed with %s", zmq_strerror(zmq_errno()));
         return err;
     }
 
@@ -123,7 +123,7 @@ int zmq_publish_result(void* publisher, char* uid, char* result)
  */
 int uid_valid(char* uid, uint32_t *acl)
 {
-    int err;
+  int err, bytes_sent;
     int card_ret = -1;
     void *zmq_context_uidvalid = zmq_init(ZMQ_NUM_IOTHREADS);
     void *requester = zmq_socket(zmq_context_uidvalid, ZMQ_REQ);
@@ -141,10 +141,10 @@ int uid_valid(char* uid, uint32_t *acl)
         zmq_msg_close(&request);
         goto END;
     }
-    err = zmq_send(requester, &request, 0);
-    if (err != 0)
+    bytes_sent = zmq_msg_send( &request,requester,0);
+    if (bytes_sent < 0)
     {
-        log_error("zmq_send failed with %s", zmq_strerror(zmq_errno()));
+        log_error("zmq_msg_send3 failed with %s", zmq_strerror(zmq_errno()));
         goto END;
     }
     zmq_msg_close(&request);
@@ -154,17 +154,18 @@ int uid_valid(char* uid, uint32_t *acl)
     {
         partno++;
         zmq_msg_t message;
-        zmq_msg_init(&message);
-        if (err != 0)
+        err = zmq_msg_init(&message);
+        if (err < 0)
         {
             log_error("zmq_msg_init failed with %s", zmq_strerror(zmq_errno()));
             goto END;
         }
-        err = zmq_recv(requester, &message, 0);
-        if (err != 0)
+        err = zmq_msg_recv(&message, requester, 0);
+	
+        if (err < 0)
         {
             zmq_msg_close (&message);
-            log_error("zmq_recv failed with %s", zmq_strerror(zmq_errno()));
+            log_error("zmq_msg_recv failed with %s", zmq_strerror(zmq_errno()));
             goto END;
         }
 

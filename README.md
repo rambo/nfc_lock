@@ -5,8 +5,6 @@ nfc_lock
 
 ## libnfc and libfreefare
 
-Ubuntu 14.04 has libnfc but no libfreefare, use [this PPA](https://launchpad.net/~christopher-hoskin/+archive/ubuntu/ppa)
-
     sudo apt-add-repository ppa:christopher-hoskin/ppa
     sudo apt-get update
     sudo apt-get install libnfc5 libnfc-bin libnfc-pn53x-examples libnfc-examples
@@ -23,7 +21,7 @@ For the C programs.
 
 ### RasPi
 
-Install the debs from [./raspi/debs/](./raspi/debs/) (or compile them using source debs from Jessie)
+All libraries should be part of normal releases now.
 
 ## Terms
 
