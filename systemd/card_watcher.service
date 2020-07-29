@@ -1,0 +1,8 @@
+[Unit]
+Description=NFC lock IO process
+
+[Service]
+ExecStart=/opt/nfc_lock/bin/card_watcher.py /opt/nfc_lock/config.yml
+
+[Install]
+WantedBy=multi-user.target

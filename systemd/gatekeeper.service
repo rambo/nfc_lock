@@ -1,0 +1,8 @@
+[Unit]
+Description=Gatekeeper NFC daemon
+
+[Service]
+ExecStart=/opt/nfc_lock/bin/gatekeeper
+
+[Install]
+WantedBy=multi-user.target
