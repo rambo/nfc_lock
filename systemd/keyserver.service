@@ -1,0 +1,9 @@
+[Unit]
+Description=Gatekeeper key server
+
+[Service]
+WorkingDirectory=/opt/nfc_lock/bin
+ExecStart=/opt/nfc_lock/bin/keyserver.py /opt/nfc_lock/config.yml
+
+[Install]
+WantedBy=multi-user.target
